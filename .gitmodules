@@ -1,0 +1,3 @@
+[submodule "isa-sim.wiki"]
+	path = isa-sim.wiki
+	url = git@github.com:TomLonergan03/isa-sim.wiki.git
