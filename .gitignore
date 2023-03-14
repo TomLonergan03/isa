@@ -10,4 +10,4 @@
 **/*.rs.bk
 
 # Wiki repo
-/isa-sim.wiki/
+/*.wiki/
