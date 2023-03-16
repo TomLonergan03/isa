@@ -1,11 +1,12 @@
 use crate::instructions::parse_instruction;
 use crate::statemachine::StateMachine;
 use crate::types::{ControlSignals, InstructionToken, InstructionType, Opcode};
+use log::debug;
 
 pub struct Processor {
     clock_cycle: u64,
     registers: [u16; 16],
-    memory: [u16; 4096],
+    memory: [u16; 65536],
     instruction_register: u16,
     control_signals: ControlSignals,
     state_machine: StateMachine,
@@ -19,13 +20,14 @@ impl Processor {
             .split("\n")
             .map(|x| parse_instruction(x).expect("Invalid instruction"))
             .collect();
-        let mut memory_array: [u16; 4096] = [0; 4096];
+        let mut memory_array: [u16; 65536] = [0; 65536];
         for (i, instruction) in instruction_array.iter().enumerate() {
             memory_array[i] = *instruction;
         }
-        memory_array.map(|x| match x {
+        debug!("Memory contents");
+        memory_array.iter().enumerate().for_each(|(i, x)| match x {
             0 => (),
-            _ => println!("{:#06X}", x),
+            _ => debug!("Line {:#06X}: {:#06X}", i, x),
         });
 
         return Processor {
