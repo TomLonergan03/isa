@@ -82,12 +82,55 @@ pub enum State {
 
 pub struct InstructionToken {
     pub opcode: Opcode,
-    pub byte_2: u8,
-    pub byte_3: u8,
-    pub byte_4: u8,
+    pub nibble_2: u8,
+    pub nibble_3: u8,
+    pub nibble_4: u8,
     pub instruction_type: InstructionType,
 }
 
+pub enum AddressSource {
+    ALU,
+    ProgramCounter,
+}
+
+pub enum RegisterSource {
+    Instruction,
+    Memory,
+    Alu,
+    AluZero,
+    AluNegative,
+}
+
+pub enum AluOperation {
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+    And,
+    Or,
+    ShiftLeft,
+    ShiftRightLogical,
+    ShiftRightArithmetic,
+}
+
+pub struct PipelineRegisters {
+    pub memory_data: u16,
+    pub register_read_a: u16,
+    pub register_read_b: u16,
+    pub alu_output: u32,
+}
 pub struct ControlSignals {
+    pub decode: bool,
     pub terminate: bool,
+    pub address_source: AddressSource,
+    pub memory_read: bool,
+    pub memory_write: bool,
+    pub instruction_register_write: bool,
+    pub register_write: bool,
+    pub upper_register_write: bool,
+    pub long_register_write: bool,
+    pub read_pc: bool,
+    pub write_pc: bool,
+    pub write_register_source: RegisterSource,
+    pub alu_operation: AluOperation,
 }
