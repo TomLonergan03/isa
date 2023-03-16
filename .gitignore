@@ -12,4 +12,5 @@
 # Wiki repo
 /*.wiki/
 
-out
+*.log
+*.dump
