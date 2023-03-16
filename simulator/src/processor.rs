@@ -1,6 +1,8 @@
 use crate::instructions::parse_instruction;
 use crate::statemachine::StateMachine;
-use crate::types::{ControlSignals, InstructionToken, InstructionType, Opcode};
+use crate::types::{
+    AddressSource, ControlSignals, InstructionToken, InstructionType, Opcode, PipelineRegisters,
+};
 use log::{debug, info};
 use std::fs::File;
 use std::io::Write;
@@ -14,6 +16,7 @@ pub struct Processor {
     instruction_token: InstructionToken,
     control_signals: ControlSignals,
     state_machine: StateMachine,
+    pipeline_registers: PipelineRegisters,
 }
 
 impl Processor {
@@ -42,12 +45,32 @@ impl Processor {
             instruction_token: InstructionToken {
                 instruction_type: InstructionType::Invalid,
                 opcode: Opcode::Invalid,
-                byte_2: 0,
-                byte_3: 0,
-                byte_4: 0,
+                nibble_2: 0,
+                nibble_3: 0,
+                nibble_4: 0,
             },
-            control_signals: ControlSignals { terminate: false },
+            control_signals: ControlSignals {
+                decode: false,
+                terminate: false,
+                address_source: crate::types::AddressSource::ALU,
+                memory_read: false,
+                memory_write: false,
+                instruction_register_write: false,
+                register_write: false,
+                upper_register_write: false,
+                long_register_write: false,
+                read_pc: false,
+                write_pc: false,
+                write_register_source: crate::types::RegisterSource::Instruction,
+                alu_operation: crate::types::AluOperation::Add,
+            },
             state_machine: StateMachine::new(),
+            pipeline_registers: PipelineRegisters {
+                memory_data: 0,
+                register_read_a: 0,
+                register_read_b: 0,
+                alu_output: 0,
+            },
         };
     }
 
@@ -61,26 +84,42 @@ impl Processor {
             self.coredump();
             return false;
         }
-        // do things with the control signals
+        if self.control_signals.decode {
+            debug!("Decoding instruction {:#06X}", self.instruction_register);
+            self.instruction_token = Processor::decode_instruction(self.instruction_register);
+        }
+        if self.control_signals.memory_read {
+            let address: u16 = match self.control_signals.address_source {
+                AddressSource::ALU => u16::try_from(self.pipeline_registers.alu_output & 0xFFFF)
+                    .expect("Invalid address for memory read"),
+                AddressSource::ProgramCounter => self.pipeline_registers.register_read_a,
+            };
+
+            self.pipeline_registers.memory_data = self.memory[address as usize];
+        }
+        if self.control_signals.instruction_register_write {
+            let address: u16 = match self.control_signals.address_source {
+                AddressSource::ALU => u16::try_from(self.pipeline_registers.alu_output & 0xFFFF)
+                    .expect("Invalid address for memory read"),
+                AddressSource::ProgramCounter => self.pipeline_registers.register_read_a,
+            };
+            self.instruction_register = self.memory[address as usize];
+        }
         return true;
     }
 
-    pub fn fetch_instruction() {
-        todo!()
-    }
-
-    pub fn decode_instruction(instruction: u32) -> InstructionToken {
+    fn decode_instruction(instruction: u16) -> InstructionToken {
         let opcode: Opcode =
             Opcode::from_u8(u8::try_from((instruction & 0xF000) >> 12).expect("Invalid byte 1"));
-        let byte_2: u8 = u8::try_from((instruction & 0x0F00) >> 8).expect("Invalid byte 2");
-        let byte_3: u8 = u8::try_from((instruction & 0x00F0) >> 4).expect("Invalid byte 3");
-        let byte_4: u8 = u8::try_from(instruction & 0x000F).expect("Invalid byte 4");
+        let nibble_2: u8 = u8::try_from((instruction & 0x0F00) >> 8).expect("Invalid byte 2");
+        let nibble_3: u8 = u8::try_from((instruction & 0x00F0) >> 4).expect("Invalid byte 3");
+        let nibble_4: u8 = u8::try_from(instruction & 0x000F).expect("Invalid byte 4");
         let instruction_type: InstructionType = InstructionType::from_opcode(&opcode);
         return InstructionToken {
             opcode,
-            byte_2,
-            byte_3,
-            byte_4,
+            nibble_2,
+            nibble_3,
+            nibble_4,
             instruction_type,
         };
     }
