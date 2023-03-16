@@ -1,13 +1,17 @@
 use crate::instructions::parse_instruction;
 use crate::statemachine::StateMachine;
 use crate::types::{ControlSignals, InstructionToken, InstructionType, Opcode};
-use log::debug;
+use log::{debug, info};
+use std::fs::File;
+use std::io::Write;
+use time::OffsetDateTime;
 
 pub struct Processor {
     clock_cycle: u64,
     registers: [u16; 16],
     memory: [u16; 65536],
     instruction_register: u16,
+    instruction_token: InstructionToken,
     control_signals: ControlSignals,
     state_machine: StateMachine,
 }
@@ -24,10 +28,10 @@ impl Processor {
         for (i, instruction) in instruction_array.iter().enumerate() {
             memory_array[i] = *instruction;
         }
-        debug!("Memory contents");
+        debug!("Memory contents:");
         memory_array.iter().enumerate().for_each(|(i, x)| match x {
             0 => (),
-            _ => debug!("Line {:#06X}: {:#06X}", i, x),
+            _ => debug!("M{:#06X}: {:#06X}", i, x),
         });
 
         return Processor {
@@ -35,6 +39,13 @@ impl Processor {
             registers: [0; 16],
             memory: memory_array,
             instruction_register: 0,
+            instruction_token: InstructionToken {
+                instruction_type: InstructionType::Invalid,
+                opcode: Opcode::Invalid,
+                byte_2: 0,
+                byte_3: 0,
+                byte_4: 0,
+            },
             control_signals: ControlSignals { terminate: false },
             state_machine: StateMachine::new(),
         };
@@ -42,9 +53,12 @@ impl Processor {
 
     // returns false if the processor should terminate
     pub fn run(&mut self) -> bool {
-        self.state_machine.next_state();
+        self.state_machine.next_state(&self.instruction_token);
         self.control_signals = self.state_machine.get_control_signals();
+        self.clock_cycle += 1;
         if self.control_signals.terminate {
+            info!("Terminating processor, dumping core");
+            self.coredump();
             return false;
         }
         // do things with the control signals
@@ -69,5 +83,22 @@ impl Processor {
             byte_4,
             instruction_type,
         };
+    }
+
+    fn coredump(&self) {
+        let mut file = File::create("core.dump").expect("Could not create coredump file");
+        let mut dump = format!("Core dump at time: {:#?}\n", OffsetDateTime::now_utc());
+        dump.push_str(format!("Clock cycle: {:#?}\n", self.clock_cycle).as_str());
+        dump.push_str("\nRegisters:\n");
+        for (i, register) in self.registers.iter().enumerate() {
+            dump.push_str(format!("R{:#02X}: {:#06X}\n", i, register).as_str());
+        }
+        dump.push_str("\nMemory:\n");
+        for (i, memory) in self.memory.iter().enumerate() {
+            dump.push_str(format!("M{:#06X}: {:#06X}\n", i, memory).as_str());
+        }
+        file.write_all(dump.as_bytes())
+            .expect("Could not write to coredump file");
+        info!("Core dumped")
     }
 }

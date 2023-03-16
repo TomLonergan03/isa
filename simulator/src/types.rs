@@ -15,6 +15,7 @@ pub enum Opcode {
     LoadWord,
     SaveWord,
     Special,
+    Invalid,
 }
 
 impl Opcode {
@@ -36,7 +37,7 @@ impl Opcode {
             0x0D => Opcode::LoadWord,
             0x0E => Opcode::SaveWord,
             0x0F => Opcode::Special,
-            _ => panic!("Invalid opcode"),
+            _ => Opcode::Invalid,
         };
     }
 }
@@ -46,6 +47,7 @@ pub enum InstructionType {
     Set,
     Memory,
     Special,
+    Invalid,
 }
 
 impl InstructionType {
@@ -67,6 +69,7 @@ impl InstructionType {
             Opcode::LoadWord => InstructionType::Memory,
             Opcode::SaveWord => InstructionType::Memory,
             Opcode::Special => InstructionType::Special,
+            Opcode::Invalid => InstructionType::Invalid,
         };
     }
 }
