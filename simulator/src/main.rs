@@ -2,7 +2,7 @@ use std::fs::File;
 
 use log::info;
 use simplelog::{
-    ColorChoice, CombinedLogger, Config, LevelFilter, TermLogger, TerminalMode, WriteLogger,
+    ColorChoice, CombinedLogger, ConfigBuilder, LevelFilter, TermLogger, TerminalMode, WriteLogger,
 };
 
 mod args;
@@ -18,16 +18,23 @@ fn main() {
     }
     let args = args.unwrap();
     println!("------------------------------------------------------------------------");
+    let config = ConfigBuilder::new()
+        .set_level_padding(simplelog::LevelPadding::Right)
+        .set_thread_level(LevelFilter::Off)
+        .set_location_level(LevelFilter::Off)
+        .set_target_level(LevelFilter::Error)
+        .set_target_padding(simplelog::TargetPadding::Right(30))
+        .build();
     CombinedLogger::init(vec![
         TermLogger::new(
             args.log_level,
-            Config::default(),
+            config.clone(),
             TerminalMode::Mixed,
             ColorChoice::Auto,
         ),
         WriteLogger::new(
             LevelFilter::Trace,
-            simplelog::Config::default(),
+            config,
             File::create("processor.log").unwrap(),
         ),
     ])
