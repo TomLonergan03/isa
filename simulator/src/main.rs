@@ -13,10 +13,10 @@ mod types;
 
 fn main() {
     let args = args::parse_args();
-    if !args.valid {
-        println!("Invalid arguments, terminating");
+    if args.is_none() {
         return;
     }
+    let args = args.unwrap();
     println!("------------------------------------------------------------------------");
     CombinedLogger::init(vec![
         TermLogger::new(
@@ -32,7 +32,6 @@ fn main() {
         ),
     ])
     .unwrap();
-    // let path_to_file: &String = &args[1];
     let mut processor: processor::Processor = processor::Processor::new(args.path_to_file);
     let mut running: bool = true;
     info!("Beginning execution");
