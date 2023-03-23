@@ -5,7 +5,7 @@ pub enum Opcode {
     Divide,
     And,
     Or,
-    SetIfLessThan,
+    SetIfLess,
     SetIfEqual,
     ShiftLeft,
     ShiftRightLogical,
@@ -27,7 +27,7 @@ impl Opcode {
             0x03 => Opcode::Divide,
             0x04 => Opcode::And,
             0x05 => Opcode::Or,
-            0x06 => Opcode::SetIfLessThan,
+            0x06 => Opcode::SetIfLess,
             0x07 => Opcode::SetIfEqual,
             0x08 => Opcode::ShiftLeft,
             0x09 => Opcode::ShiftRightLogical,
@@ -59,7 +59,7 @@ impl InstructionType {
             Opcode::Divide => InstructionType::Register,
             Opcode::And => InstructionType::Register,
             Opcode::Or => InstructionType::Register,
-            Opcode::SetIfLessThan => InstructionType::Register,
+            Opcode::SetIfLess => InstructionType::Register,
             Opcode::SetIfEqual => InstructionType::Register,
             Opcode::ShiftLeft => InstructionType::Register,
             Opcode::ShiftRightLogical => InstructionType::Register,
@@ -74,9 +74,23 @@ impl InstructionType {
     }
 }
 
+#[derive(Debug)]
 pub enum State {
+    PCRead,
     InstructionFetch,
     Decode,
+    SetLower,
+    SetUpper,
+    ArithmeticOperation,
+    ArithmeticWriteBack,
+    SetIf,
+    SetIfLess,
+    SetIfEqual,
+    Memory,
+    MemoryLoad,
+    MemoryLoadWriteBack,
+    MemorySave,
+    Special,
     Terminate,
 }
 
@@ -93,7 +107,7 @@ pub enum AddressSource {
     ProgramCounter,
 }
 
-pub enum RegisterSource {
+pub enum RegisterWriteSource {
     Instruction,
     Memory,
     Alu,
@@ -113,6 +127,12 @@ pub enum AluOperation {
     ShiftRightArithmetic,
 }
 
+pub enum AluSource {
+    Register,
+    Constant1,
+    MemoryOffset,
+}
+
 pub struct PipelineRegisters {
     pub memory_data: u16,
     pub register_read_a: u16,
@@ -120,17 +140,18 @@ pub struct PipelineRegisters {
     pub alu_output: u32,
 }
 pub struct ControlSignals {
-    pub decode: bool,
     pub terminate: bool,
+    pub decode: bool,
     pub address_source: AddressSource,
     pub memory_read: bool,
     pub memory_write: bool,
     pub instruction_register_write: bool,
     pub register_write: bool,
-    pub upper_register_write: bool,
-    pub long_register_write: bool,
+    pub register_write_source: RegisterWriteSource,
+    pub write_upper: bool,
+    pub write_long: bool,
     pub read_pc: bool,
     pub write_pc: bool,
-    pub write_register_source: RegisterSource,
     pub alu_operation: AluOperation,
+    pub alu_source: AluSource,
 }

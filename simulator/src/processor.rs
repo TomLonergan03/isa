@@ -1,7 +1,8 @@
 use crate::instructions::parse_instruction;
 use crate::statemachine::StateMachine;
 use crate::types::{
-    AddressSource, ControlSignals, InstructionToken, InstructionType, Opcode, PipelineRegisters,
+    AddressSource, AluOperation, AluSource, ControlSignals, InstructionToken, InstructionType,
+    Opcode, PipelineRegisters, RegisterWriteSource,
 };
 use log::{debug, info};
 use std::fs::File;
@@ -50,19 +51,20 @@ impl Processor {
                 nibble_4: 0,
             },
             control_signals: ControlSignals {
+                terminate: true,
                 decode: false,
-                terminate: false,
-                address_source: crate::types::AddressSource::ALU,
+                address_source: AddressSource::ProgramCounter,
                 memory_read: false,
                 memory_write: false,
                 instruction_register_write: false,
                 register_write: false,
-                upper_register_write: false,
-                long_register_write: false,
+                register_write_source: RegisterWriteSource::Instruction,
+                write_upper: false,
+                write_long: false,
                 read_pc: false,
                 write_pc: false,
-                write_register_source: crate::types::RegisterSource::Instruction,
-                alu_operation: crate::types::AluOperation::Add,
+                alu_operation: AluOperation::Add,
+                alu_source: AluSource::Register,
             },
             state_machine: StateMachine::new(),
             pipeline_registers: PipelineRegisters {
@@ -89,20 +91,11 @@ impl Processor {
             self.instruction_token = Processor::decode_instruction(self.instruction_register);
         }
         if self.control_signals.memory_read {
-            let address: u16 = match self.control_signals.address_source {
-                AddressSource::ALU => u16::try_from(self.pipeline_registers.alu_output & 0xFFFF)
-                    .expect("Invalid address for memory read"),
-                AddressSource::ProgramCounter => self.pipeline_registers.register_read_a,
-            };
-
+            let address: u16 = self.get_address();
             self.pipeline_registers.memory_data = self.memory[address as usize];
         }
         if self.control_signals.instruction_register_write {
-            let address: u16 = match self.control_signals.address_source {
-                AddressSource::ALU => u16::try_from(self.pipeline_registers.alu_output & 0xFFFF)
-                    .expect("Invalid address for memory read"),
-                AddressSource::ProgramCounter => self.pipeline_registers.register_read_a,
-            };
+            let address: u16 = self.get_address();
             self.instruction_register = self.memory[address as usize];
         }
         return true;
@@ -122,6 +115,14 @@ impl Processor {
             nibble_4,
             instruction_type,
         };
+    }
+
+    fn get_address(&self) -> u16 {
+        match self.control_signals.address_source {
+            AddressSource::ALU => u16::try_from(self.pipeline_registers.alu_output & 0xFFFF)
+                .expect("Invalid address for memory read"),
+            AddressSource::ProgramCounter => self.pipeline_registers.register_read_a,
+        }
     }
 
     fn coredump(&self) {
