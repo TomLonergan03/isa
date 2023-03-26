@@ -2,3 +2,4 @@ B 3 F 5  # set r3 to 245
 B 4 1 9
 C 4 1 E  # set r4 to 6430 / 0x191E
 0 5 3 4  # set r5 to r3 + r4
+F 1 0 0  # terminate processor

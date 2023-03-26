@@ -3,6 +3,7 @@ pub struct Args {
     pub log_level: simplelog::LevelFilter,
     pub path_to_file: String,
     pub help_set: bool,
+    pub breakpoint: u64,
 }
 
 fn log_level_from_string(log_level: &String) -> simplelog::LevelFilter {
@@ -37,6 +38,18 @@ fn parse_arg(arg: &String, mut current_args: Args) -> Option<Args> {
             print_help();
             current_args.help_set = true;
         }
+        x if x.contains("--breakpoint=") => {
+            let breakpoint = x.replace("--breakpoint=", "").parse::<u64>();
+            match breakpoint {
+                Ok(x) => {
+                    current_args.breakpoint = x;
+                    println!("Breakpoint on instruction {}", x)
+                }
+                Err(_) => {
+                    println!("Invalid breakpoint")
+                }
+            }
+        }
         _ => {
             println!("Invalid argument: {}", arg);
             return None;
@@ -68,6 +81,7 @@ pub fn parse_args() -> Option<Args> {
         log_level: simplelog::LevelFilter::Info,
         path_to_file: String::from("../example_bytecode/basic_addition.ayu"),
         help_set: false,
+        breakpoint: u64::MAX,
     };
     let parsed_args: Args = args.iter().fold(initial_args, |current_args, arg| {
         let previous_args: Args = current_args.clone();

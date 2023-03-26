@@ -76,9 +76,9 @@ impl InstructionType {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum State {
-    PCRead,
+    PcRead,
     InstructionFetch,
     Decode,
     SetLower,
@@ -89,9 +89,9 @@ pub enum State {
     SetIfLess,
     SetIfEqual,
     Memory,
-    MemoryLoad,
-    MemoryLoadWriteBack,
-    MemorySave,
+    MemoryRead,
+    MemoryReadRegisterWriteback,
+    MemoryWrite,
     Special,
     Terminate,
 }
@@ -117,7 +117,7 @@ pub enum RegisterWriteSource {
     AluZero,
     AluNegative,
 }
-
+#[derive(Debug, Clone, PartialEq)]
 pub enum AluOperation {
     Add,
     Subtract,
@@ -128,6 +128,7 @@ pub enum AluOperation {
     ShiftLeft,
     ShiftRightLogical,
     ShiftRightArithmetic,
+    Inactive,
 }
 
 impl AluOperation {
@@ -158,12 +159,21 @@ pub enum AluSource {
     MemoryOffset,
 }
 
+pub struct AluOutput {
+    pub result: u32,
+    pub zero: bool,
+    pub negative: bool,
+}
+
 pub struct PipelineRegisters {
     pub memory_data: u16,
     pub register_read_a: u16,
     pub register_read_b: u16,
     pub alu_output: u32,
+    pub alu_negative: bool,
+    pub alu_zero: bool,
 }
+
 pub struct ControlSignals {
     pub terminate: bool,
     pub decode: bool,
@@ -179,4 +189,5 @@ pub struct ControlSignals {
     pub write_pc: bool,
     pub alu_operation: AluOperation,
     pub alu_source: AluSource,
+    pub process_special: bool,
 }

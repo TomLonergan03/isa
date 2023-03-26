@@ -1,15 +1,17 @@
+use crate::alu;
 use crate::instructions::parse_instruction;
 use crate::statemachine::StateMachine;
 use crate::types::{
-    AddressSource, AluOperation, AluSource, ControlSignals, InstructionToken, InstructionType,
-    Opcode, PipelineRegisters, RegisterWriteSource,
+    AddressSource, AluOperation, AluOutput, AluSource, ControlSignals, InstructionToken,
+    InstructionType, Opcode, PipelineRegisters, RegisterWriteSource,
 };
-use log::{debug, info};
+use log::{debug, error, info, trace};
 use std::fs::File;
 use std::io::Write;
 use time::OffsetDateTime;
 
 pub struct Processor {
+    alu: alu::Alu,
     clock_cycle: u64,
     registers: [u16; 16],
     memory: [u16; 65536],
@@ -18,10 +20,11 @@ pub struct Processor {
     control_signals: ControlSignals,
     state_machine: StateMachine,
     pipeline_registers: PipelineRegisters,
+    breakpoint: u64,
 }
 
 impl Processor {
-    pub fn new(path_to_file: String) -> Processor {
+    pub fn new(path_to_file: String, breakpoint: u64) -> Processor {
         let instruction_string: String =
             std::fs::read_to_string(path_to_file).expect("File not found");
         let instruction_array: Vec<u16> = instruction_string
@@ -39,6 +42,7 @@ impl Processor {
         });
 
         return Processor {
+            alu: alu::Alu::new(),
             clock_cycle: 0,
             registers: [0; 16],
             memory: memory_array,
@@ -63,8 +67,9 @@ impl Processor {
                 write_long: false,
                 read_pc: false,
                 write_pc: false,
-                alu_operation: AluOperation::Add,
+                alu_operation: AluOperation::Inactive,
                 alu_source: AluSource::Register,
+                process_special: false,
             },
             state_machine: StateMachine::new(),
             pipeline_registers: PipelineRegisters {
@@ -72,15 +77,41 @@ impl Processor {
                 register_read_a: 0,
                 register_read_b: 0,
                 alu_output: 0,
+                alu_negative: false,
+                alu_zero: false,
             },
+            breakpoint,
         };
     }
 
     // returns false if the processor should terminate
     pub fn run(&mut self) -> bool {
-        self.state_machine.next_state(&self.instruction_token);
+        // state machine shouldn't advance on first cycle
+        if self.clock_cycle != 0 {
+            self.state_machine.next_state(&self.instruction_token);
+        }
         self.control_signals = self.state_machine.get_control_signals();
-        self.clock_cycle += 1;
+
+        // Do ALU op if active
+        if self.control_signals.alu_operation != AluOperation::Inactive {
+            let source_1: u16 = self.pipeline_registers.register_read_a;
+            let source_2: u16 = match self.control_signals.alu_source {
+                AluSource::Register => self.pipeline_registers.register_read_b,
+                AluSource::Constant1 => 1,
+                AluSource::MemoryOffset => self.instruction_token.nibble_4 as u16,
+            };
+            let alu_result: AluOutput =
+                self.alu
+                    .execute_operation(source_1, source_2, &self.control_signals.alu_operation);
+            info!(
+                "Alu operation {:#06X} {:?} {:#06X} = {:#06X}",
+                source_1, self.control_signals.alu_operation, source_2, alu_result.result
+            );
+            self.pipeline_registers.alu_output = alu_result.result;
+            self.pipeline_registers.alu_zero = alu_result.zero;
+            self.pipeline_registers.alu_negative = alu_result.negative;
+        }
+
         if self.control_signals.terminate {
             info!("Terminating processor, dumping core");
             self.coredump();
@@ -90,14 +121,91 @@ impl Processor {
             debug!("Decoding instruction {:#06X}", self.instruction_register);
             self.instruction_token = Processor::decode_instruction(self.instruction_register);
         }
+        if self.control_signals.write_pc {
+            trace!("Writing PC {}", self.pipeline_registers.alu_output & 0xFFFF);
+            self.registers[1] = (self.pipeline_registers.alu_output & 0xFFFF) as u16;
+        }
         if self.control_signals.memory_read {
-            let address: u16 = self.get_address();
-            self.pipeline_registers.memory_data = self.memory[address as usize];
+            let address: u16 = match self.control_signals.address_source {
+                AddressSource::ProgramCounter => self.pipeline_registers.register_read_a,
+                AddressSource::Alu => (self.pipeline_registers.alu_output & 0xFFFF) as u16,
+            };
+            let data = self.memory[address as usize];
+            self.pipeline_registers.memory_data = data;
+            if self.control_signals.instruction_register_write {
+                self.instruction_register = data;
+            }
+            trace!(
+                "Read M{:#06X} = {:#06X}",
+                address,
+                self.pipeline_registers.memory_data
+            );
         }
-        if self.control_signals.instruction_register_write {
-            let address: u16 = self.get_address();
-            self.instruction_register = self.memory[address as usize];
+        if self.control_signals.memory_write {
+            let address: u16 = match self.control_signals.address_source {
+                AddressSource::ProgramCounter => self.pipeline_registers.register_read_a,
+                AddressSource::Alu => (self.pipeline_registers.alu_output & 0xFFFE) as u16,
+            };
+            let data = self.pipeline_registers.register_read_b;
+            self.memory[address as usize] = data;
+            trace!("Wrote M{:#06X} = {:#06X}", address, data);
         }
+        if self.control_signals.register_write {
+            let value_to_write: u16 = match self.control_signals.register_write_source {
+                RegisterWriteSource::Alu => (self.pipeline_registers.alu_output & 0xFFFF) as u16,
+                RegisterWriteSource::Instruction => {
+                    ((((((self.instruction_token.nibble_3 as u16) << 4) & 0xF0) as u8)
+                        + self.instruction_token.nibble_4)
+                        & 0xFF) as u16
+                }
+                RegisterWriteSource::AluNegative => self.pipeline_registers.alu_negative as u16,
+                RegisterWriteSource::AluZero => self.pipeline_registers.alu_zero as u16,
+                RegisterWriteSource::Memory => self.pipeline_registers.memory_data,
+            };
+            trace!(
+                "Writing {:06X} to register {:01X}",
+                value_to_write,
+                self.instruction_token.nibble_2
+            );
+            if self.control_signals.write_upper {
+                self.registers[self.instruction_token.nibble_2 as usize] |= value_to_write << 8;
+            } else {
+                self.registers[self.instruction_token.nibble_2 as usize] = value_to_write;
+            }
+        }
+
+        // update pipeline registers from register read
+        self.pipeline_registers.register_read_a = match self.control_signals.read_pc {
+            true => {
+                trace!("Reading PC");
+                self.registers[1]
+            }
+            false => self.registers[self.instruction_token.nibble_3 as usize],
+        };
+
+        self.pipeline_registers.register_read_b =
+            self.registers[self.instruction_token.nibble_4 as usize];
+
+        if self.control_signals.process_special {
+            match self.instruction_token.nibble_2 {
+                1 => {
+                    info!("Reached end of program");
+                    self.coredump();
+                    return false;
+                }
+                _ => {
+                    error!("Unimplemented special instruction");
+                    self.coredump();
+                    return false;
+                }
+            }
+        }
+
+        if self.registers[1] as u64 > self.breakpoint {
+            self.coredump();
+            return false;
+        }
+        self.clock_cycle += 1;
         return true;
     }
 
@@ -115,14 +223,6 @@ impl Processor {
             nibble_4,
             instruction_type,
         };
-    }
-
-    fn get_address(&self) -> u16 {
-        match self.control_signals.address_source {
-            AddressSource::Alu => u16::try_from(self.pipeline_registers.alu_output & 0xFFFF)
-                .expect("Invalid address for memory read"),
-            AddressSource::ProgramCounter => self.pipeline_registers.register_read_a,
-        }
     }
 
     fn coredump(&self) {

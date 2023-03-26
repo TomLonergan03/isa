@@ -5,6 +5,7 @@ use simplelog::{
     ColorChoice, CombinedLogger, ConfigBuilder, LevelFilter, TermLogger, TerminalMode, WriteLogger,
 };
 
+mod alu;
 mod args;
 mod instructions;
 mod processor;
@@ -39,7 +40,8 @@ fn main() {
         ),
     ])
     .unwrap();
-    let mut processor: processor::Processor = processor::Processor::new(args.path_to_file);
+    let mut processor: processor::Processor =
+        processor::Processor::new(args.path_to_file, args.breakpoint);
     let mut running: bool = true;
     info!("Beginning execution");
     while running {

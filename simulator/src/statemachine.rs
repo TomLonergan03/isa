@@ -11,8 +11,9 @@ pub struct StateMachine {
 
 impl StateMachine {
     pub fn new() -> StateMachine {
+        trace!("Initialising state machine in PcRead state");
         StateMachine {
-            state: State::InstructionFetch,
+            state: State::PcRead,
             opcode: Opcode::Invalid,
         }
     }
@@ -32,10 +33,11 @@ impl StateMachine {
                 write_long: false,
                 read_pc: false,
                 write_pc: false,
-                alu_operation: AluOperation::Add,
+                alu_operation: AluOperation::Inactive,
                 alu_source: AluSource::Register,
+                process_special: false,
             },
-            State::PCRead => ControlSignals {
+            State::PcRead => ControlSignals {
                 terminate: false,
                 decode: false,
                 address_source: AddressSource::ProgramCounter,
@@ -48,8 +50,9 @@ impl StateMachine {
                 write_long: false,
                 read_pc: true,
                 write_pc: false,
-                alu_operation: AluOperation::Add,
+                alu_operation: AluOperation::Inactive,
                 alu_source: AluSource::Register,
+                process_special: false,
             },
             State::InstructionFetch => ControlSignals {
                 terminate: false,
@@ -66,10 +69,11 @@ impl StateMachine {
                 write_pc: false,
                 alu_operation: AluOperation::Add,
                 alu_source: AluSource::Constant1,
+                process_special: false,
             },
             State::Decode => ControlSignals {
                 terminate: false,
-                decode: false,
+                decode: true,
                 address_source: AddressSource::ProgramCounter,
                 memory_read: false,
                 memory_write: false,
@@ -80,8 +84,9 @@ impl StateMachine {
                 write_long: false,
                 read_pc: false,
                 write_pc: true,
-                alu_operation: AluOperation::Add,
+                alu_operation: AluOperation::Inactive,
                 alu_source: AluSource::Register,
+                process_special: false,
             },
             State::SetLower => ControlSignals {
                 terminate: false,
@@ -96,8 +101,9 @@ impl StateMachine {
                 write_long: false,
                 read_pc: false,
                 write_pc: false,
-                alu_operation: AluOperation::Add,
+                alu_operation: AluOperation::Inactive,
                 alu_source: AluSource::Register,
+                process_special: false,
             },
             State::SetUpper => ControlSignals {
                 terminate: false,
@@ -112,8 +118,9 @@ impl StateMachine {
                 write_long: false,
                 read_pc: false,
                 write_pc: false,
-                alu_operation: AluOperation::Add,
+                alu_operation: AluOperation::Inactive,
                 alu_source: AluSource::Register,
+                process_special: false,
             },
             State::ArithmeticOperation => ControlSignals {
                 terminate: false,
@@ -130,6 +137,7 @@ impl StateMachine {
                 write_pc: false,
                 alu_operation: AluOperation::from_opcode(&self.opcode),
                 alu_source: AluSource::Register,
+                process_special: false,
             },
             State::SetIf => ControlSignals {
                 terminate: false,
@@ -146,6 +154,7 @@ impl StateMachine {
                 write_pc: false,
                 alu_operation: AluOperation::Subtract,
                 alu_source: AluSource::Register,
+                process_special: false,
             },
             State::Memory => ControlSignals {
                 terminate: false,
@@ -162,6 +171,7 @@ impl StateMachine {
                 write_pc: false,
                 alu_operation: AluOperation::Add,
                 alu_source: AluSource::MemoryOffset,
+                process_special: false,
             },
             State::ArithmeticWriteBack => ControlSignals {
                 terminate: false,
@@ -176,8 +186,9 @@ impl StateMachine {
                 write_long: false,
                 read_pc: false,
                 write_pc: false,
-                alu_operation: AluOperation::Add,
+                alu_operation: AluOperation::Inactive,
                 alu_source: AluSource::Register,
+                process_special: false,
             },
             State::SetIfLess => ControlSignals {
                 terminate: false,
@@ -192,8 +203,9 @@ impl StateMachine {
                 write_long: false,
                 read_pc: false,
                 write_pc: false,
-                alu_operation: AluOperation::Add,
+                alu_operation: AluOperation::Inactive,
                 alu_source: AluSource::Register,
+                process_special: false,
             },
             State::SetIfEqual => ControlSignals {
                 terminate: false,
@@ -208,10 +220,11 @@ impl StateMachine {
                 write_long: false,
                 read_pc: false,
                 write_pc: false,
-                alu_operation: AluOperation::Add,
+                alu_operation: AluOperation::Inactive,
                 alu_source: AluSource::Register,
+                process_special: false,
             },
-            State::MemoryLoad => ControlSignals {
+            State::MemoryRead => ControlSignals {
                 terminate: false,
                 decode: false,
                 address_source: AddressSource::Alu,
@@ -224,10 +237,11 @@ impl StateMachine {
                 write_long: false,
                 read_pc: false,
                 write_pc: false,
-                alu_operation: AluOperation::Add,
+                alu_operation: AluOperation::Inactive,
                 alu_source: AluSource::Register,
+                process_special: false,
             },
-            State::MemorySave => ControlSignals {
+            State::MemoryWrite => ControlSignals {
                 terminate: false,
                 decode: false,
                 address_source: AddressSource::Alu,
@@ -240,10 +254,11 @@ impl StateMachine {
                 write_long: false,
                 read_pc: false,
                 write_pc: false,
-                alu_operation: AluOperation::Add,
+                alu_operation: AluOperation::Inactive,
                 alu_source: AluSource::Register,
+                process_special: false,
             },
-            State::MemoryLoadWriteBack => ControlSignals {
+            State::MemoryReadRegisterWriteback => ControlSignals {
                 terminate: false,
                 decode: false,
                 address_source: AddressSource::Alu,
@@ -256,38 +271,57 @@ impl StateMachine {
                 write_long: false,
                 read_pc: false,
                 write_pc: false,
-                alu_operation: AluOperation::Add,
+                alu_operation: AluOperation::Inactive,
                 alu_source: AluSource::Register,
+                process_special: false,
             },
-            _ => {
-                error!("Unimplemented state for control signals: {:?}", self.state);
-                ControlSignals {
-                    terminate: true,
-                    decode: false,
-                    address_source: AddressSource::ProgramCounter,
-                    memory_read: false,
-                    memory_write: false,
-                    instruction_register_write: false,
-                    register_write: false,
-                    register_write_source: RegisterWriteSource::Instruction,
-                    write_upper: false,
-                    write_long: false,
-                    read_pc: false,
-                    write_pc: false,
-                    alu_operation: AluOperation::Add,
-                    alu_source: AluSource::Register,
-                }
-            }
+            State::Special => ControlSignals {
+                terminate: false,
+                decode: false,
+                address_source: AddressSource::Alu,
+                memory_read: false,
+                memory_write: false,
+                instruction_register_write: false,
+                register_write: false,
+                register_write_source: RegisterWriteSource::Alu,
+                write_upper: false,
+                write_long: false,
+                read_pc: false,
+                write_pc: false,
+                alu_operation: AluOperation::Inactive,
+                alu_source: AluSource::Register,
+                process_special: true,
+            },
+            // _ => {
+            //     error!("Unimplemented state for control signals: {:?}", self.state);
+            //     ControlSignals {
+            //         terminate: true,
+            //         decode: false,
+            //         address_source: AddressSource::ProgramCounter,
+            //         memory_read: false,
+            //         memory_write: false,
+            //         instruction_register_write: false,
+            //         register_write: false,
+            //         register_write_source: RegisterWriteSource::Instruction,
+            //         write_upper: false,
+            //         write_long: false,
+            //         read_pc: false,
+            //         write_pc: false,
+            //         alu_operation: AluOperation::Inactive,
+            //         alu_source: AluSource::Register,
+            //         process_syscall: false,
+            //     }
+            // }
         }
     }
 
     pub fn next_state(&mut self, instruction_token: &crate::types::InstructionToken) {
         match self.state {
-            State::PCRead => self.state = State::InstructionFetch,
+            State::PcRead => self.state = State::InstructionFetch,
             State::InstructionFetch => self.state = State::Decode,
             State::Decode => self.decode(instruction_token),
-            State::SetLower => self.state = State::PCRead,
-            State::SetUpper => self.state = State::PCRead,
+            State::SetLower => self.state = State::PcRead,
+            State::SetUpper => self.state = State::PcRead,
             State::ArithmeticOperation => self.state = State::ArithmeticWriteBack,
             State::SetIf => match instruction_token.opcode {
                 Opcode::SetIfLess => self.state = State::SetIfLess,
@@ -298,23 +332,26 @@ impl StateMachine {
                 }
             },
             State::Memory => match instruction_token.opcode {
-                Opcode::LoadWord => self.state = State::MemoryLoad,
-                Opcode::SaveWord => self.state = State::MemorySave,
+                Opcode::LoadWord => self.state = State::MemoryRead,
+                Opcode::SaveWord => self.state = State::MemoryWrite,
                 _ => {
                     error!("In Memory state with non Memory opcode. You should not be here");
                     self.state = State::Terminate;
                 }
             },
-            State::Special => self.state = State::PCRead,
-            State::ArithmeticWriteBack => self.state = State::PCRead,
-            State::SetIfLess => self.state = State::PCRead,
-            State::SetIfEqual => self.state = State::PCRead,
-            State::MemoryLoad => self.state = State::MemoryLoadWriteBack,
-            State::MemorySave => self.state = State::PCRead,
-            State::MemoryLoadWriteBack => self.state = State::PCRead,
+            State::Special => self.state = State::PcRead,
+            State::ArithmeticWriteBack => self.state = State::PcRead,
+            State::SetIfLess => self.state = State::PcRead,
+            State::SetIfEqual => self.state = State::PcRead,
+            State::MemoryRead => self.state = State::MemoryReadRegisterWriteback,
+            State::MemoryWrite => self.state = State::PcRead,
+            State::MemoryReadRegisterWriteback => self.state = State::PcRead,
             State::Terminate => {
                 info!("Program terminated, memory and registers dumped");
             }
+        }
+        if self.state == State::PcRead {
+            info!("New instruction")
         }
         trace!("Entering state: {:?}", self.state);
     }
@@ -329,7 +366,10 @@ impl StateMachine {
             Opcode::LoadWord => self.state = State::Memory,
             Opcode::SaveWord => self.state = State::Memory,
             Opcode::Special => self.state = State::Special,
-            Opcode::Invalid => self.state = State::Terminate,
+            Opcode::Invalid => {
+                self.state = State::Terminate;
+                error!("Invalid opcode encountered, terminating program");
+            }
             _ => self.state = State::ArithmeticOperation,
         }
     }
