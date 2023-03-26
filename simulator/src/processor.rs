@@ -119,7 +119,7 @@ impl Processor {
 
     fn get_address(&self) -> u16 {
         match self.control_signals.address_source {
-            AddressSource::ALU => u16::try_from(self.pipeline_registers.alu_output & 0xFFFF)
+            AddressSource::Alu => u16::try_from(self.pipeline_registers.alu_output & 0xFFFF)
                 .expect("Invalid address for memory read"),
             AddressSource::ProgramCounter => self.pipeline_registers.register_read_a,
         }

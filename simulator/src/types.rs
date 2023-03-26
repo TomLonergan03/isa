@@ -1,3 +1,5 @@
+use log::error;
+#[derive(Clone)]
 pub enum Opcode {
     Add,
     Subtract,
@@ -41,7 +43,7 @@ impl Opcode {
         };
     }
 }
-
+#[derive(Clone)]
 pub enum InstructionType {
     Register,
     Set,
@@ -94,6 +96,7 @@ pub enum State {
     Terminate,
 }
 
+#[derive(Clone)]
 pub struct InstructionToken {
     pub opcode: Opcode,
     pub nibble_2: u8,
@@ -103,7 +106,7 @@ pub struct InstructionToken {
 }
 
 pub enum AddressSource {
-    ALU,
+    Alu,
     ProgramCounter,
 }
 
@@ -125,6 +128,28 @@ pub enum AluOperation {
     ShiftLeft,
     ShiftRightLogical,
     ShiftRightArithmetic,
+}
+
+impl AluOperation {
+    pub fn from_opcode(opcode: &Opcode) -> AluOperation {
+        return match opcode {
+            Opcode::Add => AluOperation::Add,
+            Opcode::Subtract => AluOperation::Subtract,
+            Opcode::Multiply => AluOperation::Multiply,
+            Opcode::Divide => AluOperation::Divide,
+            Opcode::And => AluOperation::And,
+            Opcode::Or => AluOperation::Or,
+            Opcode::ShiftLeft => AluOperation::ShiftLeft,
+            Opcode::ShiftRightLogical => AluOperation::ShiftRightLogical,
+            Opcode::ShiftRightArithmetic => AluOperation::ShiftRightArithmetic,
+            Opcode::SetIfEqual => AluOperation::Subtract,
+            Opcode::SetIfLess => AluOperation::Subtract,
+            _ => {
+                error!("Invalid opcode for ALU operation");
+                panic!("Invalid opcode for ALU operation")
+            }
+        };
+    }
 }
 
 pub enum AluSource {
