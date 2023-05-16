@@ -1,10 +1,9 @@
 use log::error;
-#[derive(Clone)]
+
+#[derive(Clone, PartialEq)]
 pub enum Opcode {
     Add,
     Subtract,
-    Multiply,
-    Divide,
     And,
     Or,
     SetIfLess,
@@ -17,6 +16,8 @@ pub enum Opcode {
     LoadWord,
     SaveWord,
     Special,
+    SetPcIf,
+    SetPcIfNot,
     Invalid,
 }
 
@@ -25,19 +26,19 @@ impl Opcode {
         return match value {
             0x00 => Opcode::Add,
             0x01 => Opcode::Subtract,
-            0x02 => Opcode::Multiply,
-            0x03 => Opcode::Divide,
-            0x04 => Opcode::And,
-            0x05 => Opcode::Or,
-            0x06 => Opcode::SetIfLess,
-            0x07 => Opcode::SetIfEqual,
-            0x08 => Opcode::ShiftLeft,
-            0x09 => Opcode::ShiftRightLogical,
-            0x0A => Opcode::ShiftRightArithmetic,
-            0x0B => Opcode::SetLower,
-            0x0C => Opcode::SetUpper,
-            0x0D => Opcode::LoadWord,
-            0x0E => Opcode::SaveWord,
+            0x02 => Opcode::And,
+            0x03 => Opcode::Or,
+            0x04 => Opcode::SetIfLess,
+            0x05 => Opcode::SetIfEqual,
+            0x06 => Opcode::ShiftLeft,
+            0x07 => Opcode::ShiftRightLogical,
+            0x08 => Opcode::ShiftRightArithmetic,
+            0x09 => Opcode::SetLower,
+            0x0A => Opcode::SetUpper,
+            0x0B => Opcode::LoadWord,
+            0x0C => Opcode::SaveWord,
+            0x0D => Opcode::SetPcIf,
+            0x0E => Opcode::SetPcIfNot,
             0x0F => Opcode::Special,
             _ => Opcode::Invalid,
         };
@@ -57,8 +58,6 @@ impl InstructionType {
         return match opcode {
             Opcode::Add => InstructionType::Register,
             Opcode::Subtract => InstructionType::Register,
-            Opcode::Multiply => InstructionType::Register,
-            Opcode::Divide => InstructionType::Register,
             Opcode::And => InstructionType::Register,
             Opcode::Or => InstructionType::Register,
             Opcode::SetIfLess => InstructionType::Register,
@@ -71,6 +70,8 @@ impl InstructionType {
             Opcode::LoadWord => InstructionType::Memory,
             Opcode::SaveWord => InstructionType::Memory,
             Opcode::Special => InstructionType::Special,
+            Opcode::SetPcIf => InstructionType::Special,
+            Opcode::SetPcIfNot => InstructionType::Special,
             Opcode::Invalid => InstructionType::Invalid,
         };
     }
@@ -92,6 +93,8 @@ pub enum State {
     MemoryRead,
     MemoryReadRegisterWriteback,
     MemoryWrite,
+    SetPcTest,
+    SetPcWriteback,
     Special,
     Terminate,
 }
@@ -111,18 +114,17 @@ pub enum AddressSource {
 }
 
 pub enum RegisterWriteSource {
-    Instruction,
+    InstructionByte2,
     Memory,
     Alu,
     AluZero,
     AluNegative,
+    InstructionNibble2,
 }
 #[derive(Debug, Clone, PartialEq)]
 pub enum AluOperation {
     Add,
     Subtract,
-    Multiply,
-    Divide,
     And,
     Or,
     ShiftLeft,
@@ -136,8 +138,6 @@ impl AluOperation {
         return match opcode {
             Opcode::Add => AluOperation::Add,
             Opcode::Subtract => AluOperation::Subtract,
-            Opcode::Multiply => AluOperation::Multiply,
-            Opcode::Divide => AluOperation::Divide,
             Opcode::And => AluOperation::And,
             Opcode::Or => AluOperation::Or,
             Opcode::ShiftLeft => AluOperation::ShiftLeft,

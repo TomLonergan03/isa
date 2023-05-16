@@ -28,7 +28,7 @@ impl StateMachine {
                 memory_write: false,
                 instruction_register_write: false,
                 register_write: false,
-                register_write_source: RegisterWriteSource::Instruction,
+                register_write_source: RegisterWriteSource::InstructionByte2,
                 write_upper: false,
                 write_long: false,
                 read_pc: false,
@@ -45,7 +45,7 @@ impl StateMachine {
                 memory_write: false,
                 instruction_register_write: false,
                 register_write: false,
-                register_write_source: RegisterWriteSource::Instruction,
+                register_write_source: RegisterWriteSource::InstructionByte2,
                 write_upper: false,
                 write_long: false,
                 read_pc: true,
@@ -62,7 +62,7 @@ impl StateMachine {
                 memory_write: false,
                 instruction_register_write: true,
                 register_write: false,
-                register_write_source: RegisterWriteSource::Instruction,
+                register_write_source: RegisterWriteSource::InstructionByte2,
                 write_upper: false,
                 write_long: false,
                 read_pc: false,
@@ -96,7 +96,7 @@ impl StateMachine {
                 memory_write: false,
                 instruction_register_write: false,
                 register_write: true,
-                register_write_source: RegisterWriteSource::Instruction,
+                register_write_source: RegisterWriteSource::InstructionByte2,
                 write_upper: false,
                 write_long: false,
                 read_pc: false,
@@ -113,7 +113,7 @@ impl StateMachine {
                 memory_write: false,
                 instruction_register_write: false,
                 register_write: true,
-                register_write_source: RegisterWriteSource::Instruction,
+                register_write_source: RegisterWriteSource::InstructionByte2,
                 write_upper: true,
                 write_long: false,
                 read_pc: false,
@@ -147,7 +147,7 @@ impl StateMachine {
                 memory_write: false,
                 instruction_register_write: false,
                 register_write: false,
-                register_write_source: RegisterWriteSource::Instruction,
+                register_write_source: RegisterWriteSource::InstructionByte2,
                 write_upper: false,
                 write_long: false,
                 read_pc: false,
@@ -164,7 +164,7 @@ impl StateMachine {
                 memory_write: false,
                 instruction_register_write: false,
                 register_write: false,
-                register_write_source: RegisterWriteSource::Instruction,
+                register_write_source: RegisterWriteSource::InstructionByte2,
                 write_upper: false,
                 write_long: false,
                 read_pc: false,
@@ -275,6 +275,40 @@ impl StateMachine {
                 alu_source: AluSource::Register,
                 process_special: false,
             },
+            State::SetPcTest => ControlSignals {
+                terminate: false,
+                decode: false,
+                address_source: AddressSource::Alu,
+                memory_read: false,
+                memory_write: false,
+                instruction_register_write: false,
+                register_write: false,
+                register_write_source: RegisterWriteSource::InstructionByte2,
+                write_upper: false,
+                write_long: false,
+                read_pc: false,
+                write_pc: false,
+                alu_operation: AluOperation::Subtract,
+                alu_source: AluSource::Register,
+                process_special: false,
+            },
+            State::SetPcWriteback => ControlSignals {
+                terminate: false,
+                decode: false,
+                address_source: AddressSource::Alu,
+                memory_read: false,
+                memory_write: false,
+                instruction_register_write: false,
+                register_write: true,
+                register_write_source: RegisterWriteSource::InstructionNibble2,
+                write_upper: false,
+                write_long: false,
+                read_pc: false,
+                write_pc: false,
+                alu_operation: AluOperation::Inactive,
+                alu_source: AluSource::Register,
+                process_special: false,
+            },
             State::Special => ControlSignals {
                 terminate: false,
                 decode: false,
@@ -315,7 +349,11 @@ impl StateMachine {
         }
     }
 
-    pub fn next_state(&mut self, instruction_token: &crate::types::InstructionToken) {
+    pub fn next_state(
+        &mut self,
+        instruction_token: &crate::types::InstructionToken,
+        alu_zero: bool,
+    ) {
         match self.state {
             State::PcRead => self.state = State::InstructionFetch,
             State::InstructionFetch => self.state = State::Decode,
@@ -346,6 +384,16 @@ impl StateMachine {
             State::MemoryRead => self.state = State::MemoryReadRegisterWriteback,
             State::MemoryWrite => self.state = State::PcRead,
             State::MemoryReadRegisterWriteback => self.state = State::PcRead,
+            State::SetPcTest => {
+                if self.opcode == Opcode::SetPcIf && alu_zero {
+                    self.state = State::SetPcWriteback;
+                } else if self.opcode == Opcode::SetPcIfNot && !alu_zero {
+                    self.state = State::SetPcWriteback;
+                } else {
+                    self.state = State::PcRead;
+                }
+            }
+            State::SetPcWriteback => self.state = State::PcRead,
             State::Terminate => {
                 info!("Program terminated, memory and registers dumped");
             }
@@ -366,6 +414,8 @@ impl StateMachine {
             Opcode::LoadWord => self.state = State::Memory,
             Opcode::SaveWord => self.state = State::Memory,
             Opcode::Special => self.state = State::Special,
+            Opcode::SetPcIf => self.state = State::SetPcTest,
+            Opcode::SetPcIfNot => self.state = State::SetPcTest,
             Opcode::Invalid => {
                 self.state = State::Terminate;
                 error!("Invalid opcode encountered, terminating program");

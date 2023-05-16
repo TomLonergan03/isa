@@ -62,7 +62,7 @@ impl Processor {
                 memory_write: false,
                 instruction_register_write: false,
                 register_write: false,
-                register_write_source: RegisterWriteSource::Instruction,
+                register_write_source: RegisterWriteSource::InstructionByte2,
                 write_upper: false,
                 write_long: false,
                 read_pc: false,
@@ -88,7 +88,8 @@ impl Processor {
     pub fn run(&mut self) -> bool {
         // state machine shouldn't advance on first cycle
         if self.clock_cycle != 0 {
-            self.state_machine.next_state(&self.instruction_token);
+            self.state_machine
+                .next_state(&self.instruction_token, self.pipeline_registers.alu_zero);
         }
         self.control_signals = self.state_machine.get_control_signals();
 
@@ -152,15 +153,16 @@ impl Processor {
         }
         if self.control_signals.register_write {
             let value_to_write: u16 = match self.control_signals.register_write_source {
-                RegisterWriteSource::Alu => (self.pipeline_registers.alu_output & 0xFFFF) as u16,
-                RegisterWriteSource::Instruction => {
-                    ((((((self.instruction_token.nibble_3 as u16) << 4) & 0xF0) as u8)
-                        + self.instruction_token.nibble_4)
-                        & 0xFF) as u16
+                RegisterWriteSource::Alu => self.pipeline_registers.alu_output as u16 & 0xFFFF,
+                RegisterWriteSource::InstructionByte2 => {
+                    (((((self.instruction_token.nibble_3 as u16) << 4) & 0xF0) as u8)
+                        + self.instruction_token.nibble_4) as u16
+                        & 0xFF
                 }
                 RegisterWriteSource::AluNegative => self.pipeline_registers.alu_negative as u16,
                 RegisterWriteSource::AluZero => self.pipeline_registers.alu_zero as u16,
                 RegisterWriteSource::Memory => self.pipeline_registers.memory_data,
+                RegisterWriteSource::InstructionNibble2 => self.instruction_token.nibble_2 as u16,
             };
             trace!(
                 "Writing {:06X} to register {:01X}",
