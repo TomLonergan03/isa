@@ -1,6 +1,6 @@
 use log::error;
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum Opcode {
     Add,
     Subtract,

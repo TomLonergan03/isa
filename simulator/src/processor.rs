@@ -104,9 +104,12 @@ impl Processor {
             let alu_result: AluOutput =
                 self.alu
                     .execute_operation(source_1, source_2, &self.control_signals.alu_operation);
-            info!(
+            trace!(
                 "Alu operation {:#06X} {:?} {:#06X} = {:#06X}",
-                source_1, self.control_signals.alu_operation, source_2, alu_result.result
+                source_1,
+                self.control_signals.alu_operation,
+                source_2,
+                alu_result.result
             );
             self.pipeline_registers.alu_output = alu_result.result;
             self.pipeline_registers.alu_zero = alu_result.zero;
@@ -121,10 +124,6 @@ impl Processor {
         if self.control_signals.decode {
             debug!("Decoding instruction {:#06X}", self.instruction_register);
             self.instruction_token = Processor::decode_instruction(self.instruction_register);
-        }
-        if self.control_signals.write_pc {
-            trace!("Writing PC {}", self.pipeline_registers.alu_output & 0xFFFF);
-            self.registers[1] = (self.pipeline_registers.alu_output & 0xFFFF) as u16;
         }
         if self.control_signals.memory_read {
             let address: u16 = match self.control_signals.address_source {
@@ -151,7 +150,7 @@ impl Processor {
             self.memory[address as usize] = data;
             trace!("Wrote M{:#06X} = {:#06X}", address, data);
         }
-        if self.control_signals.register_write {
+        if self.control_signals.register_write || self.control_signals.write_pc {
             let value_to_write: u16 = match self.control_signals.register_write_source {
                 RegisterWriteSource::Alu => self.pipeline_registers.alu_output as u16 & 0xFFFF,
                 RegisterWriteSource::InstructionByte2 => {
@@ -164,15 +163,24 @@ impl Processor {
                 RegisterWriteSource::Memory => self.pipeline_registers.memory_data,
                 RegisterWriteSource::InstructionNibble2 => self.instruction_token.nibble_2 as u16,
             };
-            trace!(
-                "Writing {:06X} to register {:01X}",
-                value_to_write,
-                self.instruction_token.nibble_2
-            );
+            let register_to_write: usize = match self.control_signals.write_pc {
+                true => 1,
+                false => self.instruction_token.nibble_2 as usize,
+            };
             if self.control_signals.write_upper {
-                self.registers[self.instruction_token.nibble_2 as usize] |= value_to_write << 8;
+                trace!(
+                    "Writing {:06X} to upper 8 bits of register {:01X}",
+                    value_to_write,
+                    register_to_write
+                );
+                self.registers[register_to_write] |= value_to_write << 8;
             } else {
-                self.registers[self.instruction_token.nibble_2 as usize] = value_to_write;
+                trace!(
+                    "Writing {:06X} to register {:01X}",
+                    value_to_write,
+                    register_to_write
+                );
+                self.registers[register_to_write] = value_to_write;
             }
         }
 

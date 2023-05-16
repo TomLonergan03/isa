@@ -406,6 +406,7 @@ impl StateMachine {
 
     fn decode(&mut self, instruction_token: &InstructionToken) {
         self.opcode = instruction_token.opcode.clone();
+        info!("Decoding instruction: {:?}", instruction_token.opcode);
         match instruction_token.opcode {
             Opcode::SetLower => self.state = State::SetLower,
             Opcode::SetUpper => self.state = State::SetUpper,
