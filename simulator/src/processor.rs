@@ -93,7 +93,11 @@ impl Processor {
                 .next_state(&self.instruction_token, self.pipeline_registers.alu_zero);
         }
         self.control_signals = self.state_machine.get_control_signals();
-
+        // TEMPORARY: terminate on terminate syscall
+        if self.instruction_register >= 0xF100 {
+            info!("Terminate syscall detected");
+            self.control_signals.terminate = true;
+        }
         // Do ALU op if active
         if self.control_signals.alu_operation != AluOperation::Inactive {
             let source_1: u16 = self.pipeline_registers.register_read_a;
@@ -210,8 +214,8 @@ impl Processor {
                 }
             }
         }
-
-        if self.registers[1] as u64 > self.breakpoint {
+        if self.clock_cycle as u64 > self.breakpoint {
+            info!("Reached breakpoint");
             self.coredump();
             return false;
         }
