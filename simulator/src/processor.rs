@@ -29,6 +29,7 @@ impl Processor {
             std::fs::read_to_string(path_to_file).expect("File not found");
         let instruction_array: Vec<u16> = instruction_string
             .split("\n")
+            .filter(|x| !x.starts_with("#") && !x.is_empty())
             .map(|x| parse_instruction(x).expect("Invalid instruction"))
             .collect();
         let mut memory_array: [u16; 65536] = [0; 65536];
@@ -115,7 +116,6 @@ impl Processor {
             self.pipeline_registers.alu_zero = alu_result.zero;
             self.pipeline_registers.alu_negative = alu_result.negative;
         }
-
         if self.control_signals.terminate {
             info!("Terminating processor, dumping core");
             self.coredump();
