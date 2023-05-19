@@ -1,4 +1,4 @@
-# End result should be: [0, *, 2, 3, 4, 5, 1, 1, 8, 4, FF80, FF0]
+# End result should be: [0, *, 2, 3, 4, 5, 1, 1, 8, 4, FF80, FF0, C, D, E, F]
 # Initial jump
 9 1 0 5
 
@@ -25,7 +25,7 @@
 2 4 4 5 # r4 = r4 & r5 (r4 = 4)
 
 # Or
-9 5 0 2
+9 5 0 1
 9 6 0 4
 3 5 5 6 # r5 = r5 | r6 (r5 = 5)
 
@@ -48,7 +48,7 @@ A A F F # rA = FF00
 
 # Set upper and lower
 9 B F 0
-A B F 0 # rB = FF0
+A B F 0 # rB = F0F0
 
 # LoadWord
 B C 0 1 # rC = second word in memory (rC = C)

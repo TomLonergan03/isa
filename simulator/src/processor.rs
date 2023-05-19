@@ -94,6 +94,7 @@ impl Processor {
         }
         self.control_signals = self.state_machine.get_control_signals();
         // TEMPORARY: terminate on terminate syscall
+        // TODO: move to syscall handler
         if self.instruction_register >= 0xF100 {
             info!("Terminate syscall detected");
             self.control_signals.terminate = true;
@@ -148,7 +149,7 @@ impl Processor {
         if self.control_signals.memory_write {
             let address: u16 = match self.control_signals.address_source {
                 AddressSource::ProgramCounter => self.pipeline_registers.register_read_a,
-                AddressSource::Alu => (self.pipeline_registers.alu_output & 0xFFFE) as u16,
+                AddressSource::Alu => (self.pipeline_registers.alu_output & 0xFFFF) as u16,
             };
             let data = self.pipeline_registers.register_read_b;
             self.memory[address as usize] = data;
@@ -253,6 +254,5 @@ impl Processor {
         }
         file.write_all(dump.as_bytes())
             .expect("Could not write to coredump file");
-        info!("Core dumped")
     }
 }

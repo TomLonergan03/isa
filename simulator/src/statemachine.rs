@@ -326,26 +326,6 @@ impl StateMachine {
                 alu_source: AluSource::Register,
                 process_special: true,
             },
-            // _ => {
-            //     error!("Unimplemented state for control signals: {:?}", self.state);
-            //     ControlSignals {
-            //         terminate: true,
-            //         decode: false,
-            //         address_source: AddressSource::ProgramCounter,
-            //         memory_read: false,
-            //         memory_write: false,
-            //         instruction_register_write: false,
-            //         register_write: false,
-            //         register_write_source: RegisterWriteSource::Instruction,
-            //         write_upper: false,
-            //         write_long: false,
-            //         read_pc: false,
-            //         write_pc: false,
-            //         alu_operation: AluOperation::Inactive,
-            //         alu_source: AluSource::Register,
-            //         process_syscall: false,
-            //     }
-            // }
         }
     }
 
@@ -397,9 +377,6 @@ impl StateMachine {
             State::Terminate => {
                 info!("Program terminated, memory and registers dumped");
             }
-        }
-        if self.state == State::PcRead {
-            info!("New instruction")
         }
         trace!("Entering state: {:?}", self.state);
     }
