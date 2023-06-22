@@ -5,12 +5,7 @@ use simplelog::{
     ColorChoice, CombinedLogger, ConfigBuilder, LevelFilter, TermLogger, TerminalMode, WriteLogger,
 };
 
-mod alu;
-mod args;
-mod instructions;
-mod processor;
-mod statemachine;
-mod types;
+use simulator::{args, processor};
 
 fn main() {
     let args = args::parse_args();
