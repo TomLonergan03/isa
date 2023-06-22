@@ -240,19 +240,23 @@ impl Processor {
         };
     }
 
-    fn coredump(&self) {
+    pub fn coredump(&self) -> Vec<u16> {
         let mut file = File::create("core.dump").expect("Could not create coredump file");
         let mut dump = format!("Core dump at time: {:#?}\n", OffsetDateTime::now_utc());
         dump.push_str(format!("Clock cycle: {:#?}\n", self.clock_cycle).as_str());
         dump.push_str("\nRegisters:\n");
+        let mut dump_vec = Vec::new();
         for (i, register) in self.registers.iter().enumerate() {
             dump.push_str(format!("R{:#02X}: {:#06X}\n", i, register).as_str());
+            dump_vec.push(register.clone());
         }
         dump.push_str("\nMemory:\n");
         for (i, memory) in self.memory.iter().enumerate() {
             dump.push_str(format!("M{:#06X}: {:#06X}\n", i, memory).as_str());
+            dump_vec.push(memory.clone());
         }
         file.write_all(dump.as_bytes())
             .expect("Could not write to coredump file");
+        return dump_vec;
     }
 }
