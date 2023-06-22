@@ -24,7 +24,7 @@ pub struct Processor {
 }
 
 impl Processor {
-    pub fn new(path_to_file: String, breakpoint: u64) -> Processor {
+    pub fn new_from_file(path_to_file: String, breakpoint: u64) -> Processor {
         let instruction_string: String =
             std::fs::read_to_string(path_to_file).expect("File not found");
         let instruction_array: Vec<u16> = instruction_string
@@ -85,6 +85,61 @@ impl Processor {
         };
     }
 
+    pub fn new_from_array(register_array: [u16; 16], memory_array: [u16; 65536]) -> Processor {
+        debug!("Register contents:");
+        register_array
+            .iter()
+            .enumerate()
+            .for_each(|(i, register)| debug!("R{:#02X}: {:#06X}", i, register));
+
+        debug!("Memory contents:");
+        memory_array.iter().enumerate().for_each(|(i, x)| match x {
+            0 => (),
+            _ => debug!("M{:#06X}: {:#06X}", i, x),
+        });
+        return Processor {
+            alu: alu::Alu::new(),
+            clock_cycle: 0,
+            registers: register_array,
+            memory: memory_array,
+            instruction_register: 0,
+            instruction_token: InstructionToken {
+                instruction_type: InstructionType::Invalid,
+                opcode: Opcode::Invalid,
+                nibble_2: 0,
+                nibble_3: 0,
+                nibble_4: 0,
+            },
+            control_signals: ControlSignals {
+                terminate: true,
+                decode: false,
+                address_source: AddressSource::ProgramCounter,
+                memory_read: false,
+                memory_write: false,
+                instruction_register_write: false,
+                register_write: false,
+                register_write_source: RegisterWriteSource::InstructionByte2,
+                write_upper: false,
+                write_long: false,
+                read_pc: false,
+                write_pc: false,
+                alu_operation: AluOperation::Inactive,
+                alu_source: AluSource::Register,
+                process_special: false,
+            },
+            state_machine: StateMachine::new(),
+            pipeline_registers: PipelineRegisters {
+                memory_data: 0,
+                register_read_a: 0,
+                register_read_b: 0,
+                alu_output: 0,
+                alu_negative: false,
+                alu_zero: false,
+            },
+            breakpoint: u64::MAX,
+        };
+    }
+
     // returns false if the processor should terminate
     pub fn run(&mut self) -> bool {
         // state machine shouldn't advance on first cycle
@@ -123,7 +178,7 @@ impl Processor {
         }
         if self.control_signals.terminate {
             info!("Terminating processor, dumping core");
-            self.coredump();
+            self.coredump(true);
             return false;
         }
         if self.control_signals.decode {
@@ -151,6 +206,10 @@ impl Processor {
                 AddressSource::ProgramCounter => self.pipeline_registers.register_read_a,
                 AddressSource::Alu => (self.pipeline_registers.alu_output & 0xFFFF) as u16,
             };
+            println!(
+                "Writing {:#06X} to M{:#06X}",
+                self.pipeline_registers.register_read_b, address
+            );
             let data = self.pipeline_registers.register_read_b;
             self.memory[address as usize] = data;
             trace!("Wrote M{:#06X} = {:#06X}", address, data);
@@ -205,19 +264,19 @@ impl Processor {
             match self.instruction_token.nibble_2 {
                 1 => {
                     info!("Reached end of program");
-                    self.coredump();
+                    self.coredump(true);
                     return false;
                 }
                 _ => {
                     error!("Unimplemented special instruction");
-                    self.coredump();
+                    self.coredump(true);
                     return false;
                 }
             }
         }
         if self.clock_cycle as u64 > self.breakpoint {
             info!("Reached breakpoint");
-            self.coredump();
+            self.coredump(true);
             return false;
         }
         self.clock_cycle += 1;
@@ -240,8 +299,7 @@ impl Processor {
         };
     }
 
-    pub fn coredump(&self) -> Vec<u16> {
-        let mut file = File::create("core.dump").expect("Could not create coredump file");
+    pub fn coredump(&self, write_to_file: bool) -> Vec<u16> {
         let mut dump = format!("Core dump at time: {:#?}\n", OffsetDateTime::now_utc());
         dump.push_str(format!("Clock cycle: {:#?}\n", self.clock_cycle).as_str());
         dump.push_str("\nRegisters:\n");
@@ -255,8 +313,11 @@ impl Processor {
             dump.push_str(format!("M{:#06X}: {:#06X}\n", i, memory).as_str());
             dump_vec.push(memory.clone());
         }
-        file.write_all(dump.as_bytes())
-            .expect("Could not write to coredump file");
+        if write_to_file {
+            let mut file = File::create("core.dump").expect("Could not create coredump file");
+            file.write_all(dump.as_bytes())
+                .expect("Could not write to coredump file");
+        }
         return dump_vec;
     }
 }
