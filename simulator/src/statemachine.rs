@@ -4,6 +4,7 @@ use crate::types::{
 };
 use log::{error, info, trace};
 
+/// The state machine governing an AYU processor
 pub struct StateMachine {
     state: State,
     opcode: Opcode,
@@ -18,6 +19,7 @@ impl StateMachine {
         }
     }
 
+    /// Returns the control signals for the current state
     pub fn get_control_signals(&mut self) -> ControlSignals {
         match self.state {
             State::Terminate => ControlSignals {
@@ -347,6 +349,8 @@ impl StateMachine {
         }
     }
 
+    /// Transitions to another state based on the current state,
+    /// current instruction token, and alu result
     pub fn next_state(
         &mut self,
         instruction_token: &crate::types::InstructionToken,
@@ -397,6 +401,7 @@ impl StateMachine {
         trace!("Entering state: {:?}", self.state);
     }
 
+    /// Next state when currently in decode state
     fn decode(&mut self, instruction_token: &InstructionToken) {
         self.opcode = instruction_token.opcode.clone();
         info!("Decoding instruction: {:?}", instruction_token.opcode);

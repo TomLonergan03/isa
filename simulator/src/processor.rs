@@ -10,6 +10,7 @@ use std::fs::File;
 use std::io::Write;
 use time::OffsetDateTime;
 
+/// An AYU processor simulation
 pub struct Processor {
     alu: alu::Alu,
     clock_cycle: u64,
@@ -24,6 +25,8 @@ pub struct Processor {
 }
 
 impl Processor {
+    /// Create a processor by initialising memory to the contents of a .ayu file,
+    /// all registers are 0 so starts executing from first instruction
     pub fn new_from_file(path_to_file: String, breakpoint: u64) -> Processor {
         let instruction_string: String =
             std::fs::read_to_string(path_to_file).expect("File not found");
@@ -86,6 +89,8 @@ impl Processor {
         };
     }
 
+    /// Create a processor by initialising registers and memory to provided arrays,
+    /// therefore can be used to load a processor that has already partially executed a program
     pub fn new_from_array(register_array: [u16; 16], memory_array: [u16; 65536]) -> Processor {
         debug!("Register contents:");
         register_array
@@ -142,7 +147,7 @@ impl Processor {
         };
     }
 
-    // returns false if the processor should terminate
+    /// Runs 1 clock cycle, returns whether the processor should continue running for another cycle
     pub fn run(&mut self) -> RunState {
         // state machine shouldn't advance on first cycle
         if self.clock_cycle != 0 {
@@ -278,6 +283,7 @@ impl Processor {
         return RunState::Continue;
     }
 
+    /// Convert an instruction to an InstructionToken
     fn decode_instruction(instruction: u16) -> InstructionToken {
         let opcode: Opcode =
             Opcode::from_u8(u8::try_from((instruction & 0xF000) >> 12).expect("Invalid byte 1"));
@@ -294,6 +300,9 @@ impl Processor {
         };
     }
 
+    /// Dump the current state of a processor to a file
+    ///
+    /// Returns current register and memory state as a pair of arrays
     pub fn coredump(&self, write_to_file: bool) -> (Vec<u16>, Vec<u16>) {
         let mut dump = format!("Core dump at time: {:#?}\n", OffsetDateTime::now_utc());
         dump.push_str(format!("Clock cycle: {:#?}\n", self.clock_cycle).as_str());

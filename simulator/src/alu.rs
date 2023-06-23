@@ -2,6 +2,7 @@ use log::{error, trace};
 
 use crate::types::{AluOperation, AluOutput};
 
+/// The ALU for an AYU processor
 pub struct Alu {}
 
 impl Alu {
@@ -9,6 +10,8 @@ impl Alu {
         trace!("Initializing ALU");
         return Alu {};
     }
+
+    /// Carry out an operation on 2 values
     pub fn execute_operation(
         &self,
         source_a: u16,

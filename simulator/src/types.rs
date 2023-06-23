@@ -1,5 +1,6 @@
 use log::error;
 
+/// Opcode representations
 #[derive(Clone, PartialEq, Debug)]
 pub enum Opcode {
     Add,
@@ -21,6 +22,7 @@ pub enum Opcode {
 }
 
 impl Opcode {
+    /// Convert a u8 (such as the first nibble of an instruction) to it's opcode representation
     pub fn from_u8(value: u8) -> Opcode {
         return match value {
             0x00 => Opcode::Add,
@@ -42,6 +44,8 @@ impl Opcode {
         };
     }
 }
+
+/// Type of instruction
 #[derive(Clone)]
 pub enum InstructionType {
     Register,
@@ -52,6 +56,7 @@ pub enum InstructionType {
 }
 
 impl InstructionType {
+    /// Get an InstructionType from an Opcode
     pub fn from_opcode(opcode: &Opcode) -> InstructionType {
         return match opcode {
             Opcode::Add => InstructionType::Register,
@@ -74,6 +79,7 @@ impl InstructionType {
     }
 }
 
+/// Current state of the FSM governing control signals
 #[derive(Debug, PartialEq)]
 pub enum State {
     PcRead,
@@ -96,6 +102,7 @@ pub enum State {
     Terminate,
 }
 
+/// Instruction that has been broken into more useable pieces
 #[derive(Clone)]
 pub struct InstructionToken {
     pub opcode: Opcode,
@@ -105,11 +112,13 @@ pub struct InstructionToken {
     pub instruction_type: InstructionType,
 }
 
+/// Memory access address source
 pub enum AddressSource {
     Alu,
     ProgramCounter,
 }
 
+/// Where the value written to a register is taken from
 pub enum RegisterWriteSource {
     InstructionByte2,
     Memory,
@@ -118,6 +127,8 @@ pub enum RegisterWriteSource {
     AluNegative,
     InstructionNibble2,
 }
+
+/// Operation for the ALU to perform
 #[derive(Debug, Clone, PartialEq)]
 pub enum AluOperation {
     Add,
@@ -131,6 +142,7 @@ pub enum AluOperation {
 }
 
 impl AluOperation {
+    /// Determine appropriate ALU operation based on Opcode
     pub fn from_opcode(opcode: &Opcode) -> AluOperation {
         return match opcode {
             Opcode::Add => AluOperation::Add,
@@ -150,29 +162,34 @@ impl AluOperation {
     }
 }
 
+/// Where ALU input A is taken from
 pub enum AluSource {
     Register,
     Constant1,
     MemoryOffset,
 }
 
+/// Which nibble in the instruction is the target register to be written to
 pub enum RegisterWriteTarget {
     Nibble2,
     Nibble3,
 }
 
+/// Processor either runs or stops
 #[derive(PartialEq)]
 pub enum RunState {
     Stop,
     Continue,
 }
 
+/// Results of an ALU operation
 pub struct AluOutput {
     pub result: u32,
     pub zero: bool,
     pub negative: bool,
 }
 
+/// Values of all intermediate pipeline registers
 pub struct PipelineRegisters {
     pub memory_data: u16,
     pub register_read_a: u16,
@@ -182,6 +199,7 @@ pub struct PipelineRegisters {
     pub alu_zero: bool,
 }
 
+/// Values for all control signals
 pub struct ControlSignals {
     pub terminate: bool,
     pub decode: bool,
