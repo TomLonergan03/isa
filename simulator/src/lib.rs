@@ -3,4 +3,4 @@ pub mod args;
 mod instructions;
 pub mod processor;
 mod statemachine;
-mod types;
+pub mod types;

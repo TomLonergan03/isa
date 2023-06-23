@@ -11,14 +11,13 @@ impl Alu {
     }
     pub fn execute_operation(
         &self,
-        source_1: u16,
-        source_2: u16,
+        source_a: u16,
+        source_b: u16,
         operation: &AluOperation,
     ) -> AluOutput {
         match operation {
             AluOperation::Add => {
-                let result: u32 = (source_1 + source_2) as u32;
-                let result: u16 = (result & 0xFFFFFFFF) as u16;
+                let result: u32 = (source_a + source_b) as u32;
                 let zero: bool = result == 0;
                 let negative: bool = match result & 0b1000000000000000 {
                     1 => true,
@@ -32,11 +31,17 @@ impl Alu {
                 }
             }
             AluOperation::Subtract => {
-                let result: u64 = (source_1 as u16 - source_2 as u16) as u64;
-                let result: u32 = (result & 0xFFFFFFFF) as u32;
+                // if there would be (integer) underflow convert to 2s complement
+                let mut source_a = source_a;
+                let mut source_b = source_b;
+                if source_a < source_b {
+                    source_b = source_b - source_a;
+                    source_a = 0xFFFF;
+                }
+                let result: u32 = (source_a - source_b) as u32;
                 let zero: bool = result == 0;
                 let negative: bool = match result & 0b1000000000000000 {
-                    1 => true,
+                    0b1000000000000000 => true,
                     _ => false,
                 };
                 AluOutput {
@@ -46,7 +51,7 @@ impl Alu {
                 }
             }
             AluOperation::And => {
-                let result: u32 = (source_1 & source_2) as u32;
+                let result: u32 = (source_a & source_b) as u32;
                 let zero: bool = result == 0;
                 let negative: bool = false;
                 AluOutput {
@@ -56,7 +61,7 @@ impl Alu {
                 }
             }
             AluOperation::Or => {
-                let result: u32 = (source_1 | source_2) as u32;
+                let result: u32 = (source_a | source_b) as u32;
                 let zero: bool = result == 0;
                 let negative: bool = false;
                 AluOutput {
@@ -66,7 +71,8 @@ impl Alu {
                 }
             }
             AluOperation::ShiftLeft => {
-                let result: u32 = (source_1 << source_2) as u32;
+                let result: u32 = (source_a << source_b) as u32;
+                println!("{} << {} = {}", source_a, source_b, result);
                 let zero: bool = result == 0;
                 let negative: bool = false;
                 AluOutput {
@@ -76,7 +82,7 @@ impl Alu {
                 }
             }
             AluOperation::ShiftRightLogical => {
-                let result: u32 = (source_1 >> source_2) as u32;
+                let result: u32 = (source_a >> source_b) as u32;
                 let zero: bool = result == 0;
                 let negative: bool = false;
                 AluOutput {
@@ -86,7 +92,10 @@ impl Alu {
                 }
             }
             AluOperation::ShiftRightArithmetic => {
-                let result: u32 = ((source_1 as i16) >> source_2) as u32;
+                let result: u32 = match (source_a & 0b1000000000000000) == 0b1000000000000000 {
+                    true => ((source_a) >> source_b) as u32 | (0xFFFF << (16 - source_b)),
+                    false => ((source_a) >> source_b) as u32,
+                };
                 let zero: bool = result == 0;
                 let negative: bool = false;
                 AluOutput {

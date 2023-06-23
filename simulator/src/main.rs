@@ -5,7 +5,7 @@ use simplelog::{
     ColorChoice, CombinedLogger, ConfigBuilder, LevelFilter, TermLogger, TerminalMode, WriteLogger,
 };
 
-use simulator::{args, processor};
+use simulator::{args, processor, types::RunState};
 
 fn main() {
     let args = args::parse_args();
@@ -37,9 +37,9 @@ fn main() {
     .unwrap();
     let mut processor: processor::Processor =
         processor::Processor::new_from_file(args.path_to_file, args.breakpoint);
-    let mut running: bool = true;
+    let mut running: RunState = RunState::Continue;
     info!("Beginning execution");
-    while running {
+    while running == RunState::Continue {
         running = processor.run();
     }
     info!("Execution complete");

@@ -1,4 +1,4 @@
-use simulator;
+use simulator::{self, types::RunState};
 
 #[test]
 fn add() {
@@ -10,12 +10,12 @@ fn add() {
     memory_state[1] = 0xF100;
     let mut processor =
         simulator::processor::Processor::new_from_array(register_state, memory_state);
-    let mut running: bool = true;
-    while running {
+    let mut running: RunState = RunState::Continue;
+    while running == RunState::Continue {
         running = processor.run();
     }
-    let dump = processor.coredump(false);
-    assert_eq!(dump[2], 149);
+    let (_dump_registers, _dump_memory) = processor.coredump(false);
+    assert_eq!(_dump_registers[2], 149);
 }
 
 #[test]
@@ -28,12 +28,12 @@ fn subtract() {
     memory_state[1] = 0xF100;
     let mut processor =
         simulator::processor::Processor::new_from_array(register_state, memory_state);
-    let mut running: bool = true;
-    while running {
+    let mut running: RunState = RunState::Continue;
+    while running == RunState::Continue {
         running = processor.run();
     }
-    let dump = processor.coredump(false);
-    assert_eq!(dump[2], 9);
+    let (_dump_registers, _dump_memory) = processor.coredump(false);
+    assert_eq!(_dump_registers[2], 9);
 }
 
 #[test]
@@ -46,12 +46,12 @@ fn and() {
     memory_state[1] = 0xF100;
     let mut processor =
         simulator::processor::Processor::new_from_array(register_state, memory_state);
-    let mut running: bool = true;
-    while running {
+    let mut running: RunState = RunState::Continue;
+    while running == RunState::Continue {
         running = processor.run();
     }
-    let dump = processor.coredump(false);
-    assert_eq!(dump[2], 0b10100000);
+    let (_dump_registers, _dump_memory) = processor.coredump(false);
+    assert_eq!(_dump_registers[2], 0b10100000);
 }
 
 #[test]
@@ -64,34 +64,16 @@ fn or() {
     memory_state[1] = 0xF100;
     let mut processor =
         simulator::processor::Processor::new_from_array(register_state, memory_state);
-    let mut running: bool = true;
-    while running {
+    let mut running: RunState = RunState::Continue;
+    while running == RunState::Continue {
         running = processor.run();
     }
-    let dump = processor.coredump(false);
-    assert_eq!(dump[2], 0b11111010);
+    let (_dump_registers, _dump_memory) = processor.coredump(false);
+    assert_eq!(_dump_registers[2], 0b11111010);
 }
 
 #[test]
 fn set_if_less_false() {
-    let mut register_state = [0; 16];
-    register_state[2] = 27;
-    register_state[3] = 55;
-    let mut memory_state = [0; 65536];
-    memory_state[0] = 0x4223;
-    memory_state[1] = 0xF100;
-    let mut processor =
-        simulator::processor::Processor::new_from_array(register_state, memory_state);
-    let mut running: bool = true;
-    while running {
-        running = processor.run();
-    }
-    let dump = processor.coredump(false);
-    assert_eq!(dump[2], 1);
-}
-
-#[test]
-fn set_if_less_true() {
     let mut register_state = [0; 16];
     register_state[2] = 55;
     register_state[3] = 27;
@@ -100,12 +82,30 @@ fn set_if_less_true() {
     memory_state[1] = 0xF100;
     let mut processor =
         simulator::processor::Processor::new_from_array(register_state, memory_state);
-    let mut running: bool = true;
-    while running {
+    let mut running: RunState = RunState::Continue;
+    while running == RunState::Continue {
         running = processor.run();
     }
-    let dump = processor.coredump(false);
-    assert_eq!(dump[2], 0);
+    let (_dump_registers, _dump_memory) = processor.coredump(false);
+    assert_eq!(_dump_registers[2], 0);
+}
+
+#[test]
+fn set_if_less_true() {
+    let mut register_state = [0; 16];
+    register_state[2] = 27;
+    register_state[3] = 55;
+    let mut memory_state = [0; 65536];
+    memory_state[0] = 0x4223;
+    memory_state[1] = 0xF100;
+    let mut processor =
+        simulator::processor::Processor::new_from_array(register_state, memory_state);
+    let mut running: RunState = RunState::Continue;
+    while running == RunState::Continue {
+        running = processor.run();
+    }
+    let (_dump_registers, _dump_memory) = processor.coredump(false);
+    assert_eq!(_dump_registers[2], 1);
 }
 
 #[test]
@@ -118,12 +118,12 @@ fn set_if_equal_false() {
     memory_state[1] = 0xF100;
     let mut processor =
         simulator::processor::Processor::new_from_array(register_state, memory_state);
-    let mut running: bool = true;
-    while running {
+    let mut running: RunState = RunState::Continue;
+    while running == RunState::Continue {
         running = processor.run();
     }
-    let dump = processor.coredump(false);
-    assert_eq!(dump[2], 0);
+    let (_dump_registers, _dump_memory) = processor.coredump(false);
+    assert_eq!(_dump_registers[2], 0);
 }
 
 #[test]
@@ -136,12 +136,12 @@ fn set_if_equal_true() {
     memory_state[1] = 0xF100;
     let mut processor =
         simulator::processor::Processor::new_from_array(register_state, memory_state);
-    let mut running: bool = true;
-    while running {
+    let mut running: RunState = RunState::Continue;
+    while running == RunState::Continue {
         running = processor.run();
     }
-    let dump = processor.coredump(false);
-    assert_eq!(dump[2], 1);
+    let (_dump_registers, _dump_memory) = processor.coredump(false);
+    assert_eq!(_dump_registers[2], 1);
 }
 
 #[test]
@@ -154,49 +154,50 @@ fn shift_left() {
     memory_state[1] = 0xF100;
     let mut processor =
         simulator::processor::Processor::new_from_array(register_state, memory_state);
-    let mut running: bool = true;
-    while running {
+    let mut running: RunState = RunState::Continue;
+    while running == RunState::Continue {
         running = processor.run();
     }
-    let dump = processor.coredump(false);
-    assert_eq!(dump[2], 0b10000);
+    let (_dump_registers, _dump_memory) = processor.coredump(false);
+    println!("{:b}", _dump_registers[2]);
+    println!("{:b}", 0b10000);
+    assert_eq!(_dump_registers[2], 0b10000);
 }
 
 #[test]
 fn shift_right_logical() {
     let mut register_state = [0; 16];
-    register_state[2] = 0b10101010;
+    register_state[2] = 0b1010101000000000;
     register_state[3] = 2;
     let mut memory_state = [0; 65536];
     memory_state[0] = 0x7223;
     memory_state[1] = 0xF100;
     let mut processor =
         simulator::processor::Processor::new_from_array(register_state, memory_state);
-    let mut running: bool = true;
-    while running {
+    let mut running: RunState = RunState::Continue;
+    while running == RunState::Continue {
         running = processor.run();
     }
-    let dump = processor.coredump(false);
-    assert_eq!(dump[2], 0b00101010);
+    let (_dump_registers, _dump_memory) = processor.coredump(false);
+    assert_eq!(_dump_registers[2], 0b0010101010000000);
 }
 
 #[test]
 fn shift_right_arithmetic() {
     let mut register_state = [0; 16];
-    register_state[2] = 0b10101010;
+    register_state[2] = 0b1010101000000000;
     register_state[3] = 2;
     let mut memory_state = [0; 65536];
     memory_state[0] = 0x8223;
     memory_state[1] = 0xF100;
     let mut processor =
         simulator::processor::Processor::new_from_array(register_state, memory_state);
-    let mut running: bool = true;
-    while running {
+    let mut running: RunState = RunState::Continue;
+    while running == RunState::Continue {
         running = processor.run();
     }
-    let dump = processor.coredump(false);
-    println!("{:b}", dump[2]);
-    assert_eq!(dump[2], 0b11101010);
+    let (_dump_registers, _dump_memory) = processor.coredump(false);
+    assert_eq!(_dump_registers[2], 0b1110101010000000);
 }
 
 #[test]
@@ -207,12 +208,12 @@ fn set_lower() {
     memory_state[1] = 0xF100;
     let mut processor =
         simulator::processor::Processor::new_from_array(register_state, memory_state);
-    let mut running: bool = true;
-    while running {
+    let mut running: RunState = RunState::Continue;
+    while running == RunState::Continue {
         running = processor.run();
     }
-    let dump = processor.coredump(false);
-    assert_eq!(dump[2], 0x1F);
+    let (_dump_registers, _dump_memory) = processor.coredump(false);
+    assert_eq!(_dump_registers[2], 0x1F);
 }
 
 #[test]
@@ -224,12 +225,12 @@ fn set_upper() {
     memory_state[1] = 0xF100;
     let mut processor =
         simulator::processor::Processor::new_from_array(register_state, memory_state);
-    let mut running: bool = true;
-    while running {
+    let mut running: RunState = RunState::Continue;
+    while running == RunState::Continue {
         running = processor.run();
     }
-    let dump = processor.coredump(false);
-    assert_eq!(dump[2], 0x1F1F);
+    let (_dump_registers, _dump_memory) = processor.coredump(false);
+    assert_eq!(_dump_registers[2], 0x1F1F);
 }
 
 #[test]
@@ -237,17 +238,17 @@ fn load_word() {
     let mut register_state = [0; 16];
     register_state[2] = 0x1F;
     let mut memory_state = [0; 65536];
-    memory_state[0] = 0xB221;
+    memory_state[0] = 0xB122;
     memory_state[1] = 0xF100;
     memory_state[0x20] = 0x1234;
     let mut processor =
         simulator::processor::Processor::new_from_array(register_state, memory_state);
-    let mut running: bool = true;
-    while running {
+    let mut running: RunState = RunState::Continue;
+    while running == RunState::Continue {
         running = processor.run();
     }
-    let dump = processor.coredump(false);
-    assert_eq!(dump[2], 0x1234);
+    let (_dump_registers, _dump_memory) = processor.coredump(false);
+    assert_eq!(_dump_registers[2], 0x1234);
 }
 
 #[test]
@@ -256,17 +257,17 @@ fn save_word() {
     register_state[2] = 0xAB24;
     register_state[3] = 5;
     let mut memory_state = [0; 65536];
-    memory_state[0] = 0xC231;
+    memory_state[0] = 0xC123;
     memory_state[1] = 0xF100;
     let mut processor =
         simulator::processor::Processor::new_from_array(register_state, memory_state);
-    let mut running: bool = true;
-    while running {
+    let mut running: RunState = RunState::Continue;
+    while running == RunState::Continue {
         running = processor.run();
     }
-    let dump = processor.coredump(false);
-    println!("{:x?}", dump.split_at(100).0);
-    assert_eq!(dump[6 + 16], 0x1234);
+    let (_dump_registers, _dump_memory) = processor.coredump(false);
+    println!("{:X?}", _dump_memory.split_at(100).0);
+    assert_eq!(_dump_memory[6], 0xAB24);
 }
 
 #[test]
@@ -279,12 +280,12 @@ fn set_pc_if_true() {
     memory_state[2] = 0xF100;
     let mut processor =
         simulator::processor::Processor::new_from_array(register_state, memory_state);
-    let mut running: bool = true;
-    while running {
+    let mut running: RunState = RunState::Continue;
+    while running == RunState::Continue {
         running = processor.run();
     }
-    let dump = processor.coredump(false);
-    assert_eq!(dump[3], 0);
+    let (_dump_registers, _dump_memory) = processor.coredump(false);
+    assert_eq!(_dump_registers[3], 0);
 }
 
 #[test]
@@ -298,10 +299,10 @@ fn set_pc_if_false() {
     memory_state[2] = 0xF100;
     let mut processor =
         simulator::processor::Processor::new_from_array(register_state, memory_state);
-    let mut running: bool = true;
-    while running {
+    let mut running: RunState = RunState::Continue;
+    while running == RunState::Continue {
         running = processor.run();
     }
-    let dump = processor.coredump(false);
-    assert_eq!(dump[3], 1);
+    let (_dump_registers, _dump_memory) = processor.coredump(false);
+    assert_eq!(_dump_registers[3], 1);
 }

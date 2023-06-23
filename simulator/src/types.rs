@@ -17,7 +17,6 @@ pub enum Opcode {
     SaveWord,
     Special,
     SetPcIf,
-    SetPcIfNot,
     Invalid,
 }
 
@@ -38,7 +37,6 @@ impl Opcode {
             0x0B => Opcode::LoadWord,
             0x0C => Opcode::SaveWord,
             0x0D => Opcode::SetPcIf,
-            0x0E => Opcode::SetPcIfNot,
             0x0F => Opcode::Special,
             _ => Opcode::Invalid,
         };
@@ -71,7 +69,6 @@ impl InstructionType {
             Opcode::SaveWord => InstructionType::Memory,
             Opcode::Special => InstructionType::Special,
             Opcode::SetPcIf => InstructionType::Special,
-            Opcode::SetPcIfNot => InstructionType::Special,
             Opcode::Invalid => InstructionType::Invalid,
         };
     }
@@ -159,6 +156,17 @@ pub enum AluSource {
     MemoryOffset,
 }
 
+pub enum RegisterWriteTarget {
+    Nibble2,
+    Nibble3,
+}
+
+#[derive(PartialEq)]
+pub enum RunState {
+    Stop,
+    Continue,
+}
+
 pub struct AluOutput {
     pub result: u32,
     pub zero: bool,
@@ -190,4 +198,5 @@ pub struct ControlSignals {
     pub alu_operation: AluOperation,
     pub alu_source: AluSource,
     pub process_special: bool,
+    pub write_register_target: RegisterWriteTarget,
 }

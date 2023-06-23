@@ -3,7 +3,7 @@ use crate::instructions::parse_instruction;
 use crate::statemachine::StateMachine;
 use crate::types::{
     AddressSource, AluOperation, AluOutput, AluSource, ControlSignals, InstructionToken,
-    InstructionType, Opcode, PipelineRegisters, RegisterWriteSource,
+    InstructionType, Opcode, PipelineRegisters, RegisterWriteSource, RegisterWriteTarget, RunState,
 };
 use log::{debug, error, info, trace};
 use std::fs::File;
@@ -71,12 +71,13 @@ impl Processor {
                 alu_operation: AluOperation::Inactive,
                 alu_source: AluSource::Register,
                 process_special: false,
+                write_register_target: RegisterWriteTarget::Nibble2,
             },
             state_machine: StateMachine::new(),
             pipeline_registers: PipelineRegisters {
                 memory_data: 0,
-                register_read_a: 0,
                 register_read_b: 0,
+                register_read_a: 0,
                 alu_output: 0,
                 alu_negative: false,
                 alu_zero: false,
@@ -126,12 +127,13 @@ impl Processor {
                 alu_operation: AluOperation::Inactive,
                 alu_source: AluSource::Register,
                 process_special: false,
+                write_register_target: RegisterWriteTarget::Nibble2,
             },
             state_machine: StateMachine::new(),
             pipeline_registers: PipelineRegisters {
                 memory_data: 0,
-                register_read_a: 0,
                 register_read_b: 0,
+                register_read_a: 0,
                 alu_output: 0,
                 alu_negative: false,
                 alu_zero: false,
@@ -141,35 +143,29 @@ impl Processor {
     }
 
     // returns false if the processor should terminate
-    pub fn run(&mut self) -> bool {
+    pub fn run(&mut self) -> RunState {
         // state machine shouldn't advance on first cycle
         if self.clock_cycle != 0 {
             self.state_machine
                 .next_state(&self.instruction_token, self.pipeline_registers.alu_zero);
         }
         self.control_signals = self.state_machine.get_control_signals();
-        // TEMPORARY: terminate on terminate syscall
-        // TODO: move to syscall handler
-        if self.instruction_register >= 0xF100 {
-            info!("Terminate syscall detected");
-            self.control_signals.terminate = true;
-        }
         // Do ALU op if active
         if self.control_signals.alu_operation != AluOperation::Inactive {
-            let source_1: u16 = self.pipeline_registers.register_read_a;
-            let source_2: u16 = match self.control_signals.alu_source {
-                AluSource::Register => self.pipeline_registers.register_read_b,
+            let source_a: u16 = match self.control_signals.alu_source {
+                AluSource::Register => self.pipeline_registers.register_read_a,
                 AluSource::Constant1 => 1,
-                AluSource::MemoryOffset => self.instruction_token.nibble_4 as u16,
+                AluSource::MemoryOffset => self.instruction_token.nibble_2 as u16,
             };
+            let source_b: u16 = self.pipeline_registers.register_read_b;
             let alu_result: AluOutput =
                 self.alu
-                    .execute_operation(source_1, source_2, &self.control_signals.alu_operation);
+                    .execute_operation(source_a, source_b, &self.control_signals.alu_operation);
             trace!(
                 "Alu operation {:#06X} {:?} {:#06X} = {:#06X}",
-                source_1,
+                source_a,
                 self.control_signals.alu_operation,
-                source_2,
+                source_b,
                 alu_result.result
             );
             self.pipeline_registers.alu_output = alu_result.result;
@@ -179,7 +175,7 @@ impl Processor {
         if self.control_signals.terminate {
             info!("Terminating processor, dumping core");
             self.coredump(true);
-            return false;
+            return RunState::Stop;
         }
         if self.control_signals.decode {
             debug!("Decoding instruction {:#06X}", self.instruction_register);
@@ -187,7 +183,7 @@ impl Processor {
         }
         if self.control_signals.memory_read {
             let address: u16 = match self.control_signals.address_source {
-                AddressSource::ProgramCounter => self.pipeline_registers.register_read_a,
+                AddressSource::ProgramCounter => self.pipeline_registers.register_read_b,
                 AddressSource::Alu => (self.pipeline_registers.alu_output & 0xFFFF) as u16,
             };
             let data = self.memory[address as usize];
@@ -203,14 +199,10 @@ impl Processor {
         }
         if self.control_signals.memory_write {
             let address: u16 = match self.control_signals.address_source {
-                AddressSource::ProgramCounter => self.pipeline_registers.register_read_a,
+                AddressSource::ProgramCounter => self.pipeline_registers.register_read_b,
                 AddressSource::Alu => (self.pipeline_registers.alu_output & 0xFFFF) as u16,
             };
-            println!(
-                "Writing {:#06X} to M{:#06X}",
-                self.pipeline_registers.register_read_b, address
-            );
-            let data = self.pipeline_registers.register_read_b;
+            let data = self.pipeline_registers.register_read_a;
             self.memory[address as usize] = data;
             trace!("Wrote M{:#06X} = {:#06X}", address, data);
         }
@@ -229,7 +221,10 @@ impl Processor {
             };
             let register_to_write: usize = match self.control_signals.write_pc {
                 true => 1,
-                false => self.instruction_token.nibble_2 as usize,
+                false => match self.control_signals.write_register_target {
+                    RegisterWriteTarget::Nibble2 => self.instruction_token.nibble_2 as usize,
+                    RegisterWriteTarget::Nibble3 => self.instruction_token.nibble_3 as usize,
+                },
             };
             if self.control_signals.write_upper {
                 trace!(
@@ -249,38 +244,38 @@ impl Processor {
         }
 
         // update pipeline registers from register read
-        self.pipeline_registers.register_read_a = match self.control_signals.read_pc {
+        self.pipeline_registers.register_read_b = match self.control_signals.read_pc {
             true => {
                 trace!("Reading PC");
                 self.registers[1]
             }
-            false => self.registers[self.instruction_token.nibble_3 as usize],
+            false => self.registers[self.instruction_token.nibble_4 as usize],
         };
 
-        self.pipeline_registers.register_read_b =
-            self.registers[self.instruction_token.nibble_4 as usize];
+        self.pipeline_registers.register_read_a =
+            self.registers[self.instruction_token.nibble_3 as usize];
 
         if self.control_signals.process_special {
             match self.instruction_token.nibble_2 {
                 1 => {
                     info!("Reached end of program");
                     self.coredump(true);
-                    return false;
+                    return RunState::Stop;
                 }
                 _ => {
                     error!("Unimplemented special instruction");
                     self.coredump(true);
-                    return false;
+                    return RunState::Stop;
                 }
             }
         }
         if self.clock_cycle as u64 > self.breakpoint {
             info!("Reached breakpoint");
             self.coredump(true);
-            return false;
+            return RunState::Stop;
         }
         self.clock_cycle += 1;
-        return true;
+        return RunState::Continue;
     }
 
     fn decode_instruction(instruction: u16) -> InstructionToken {
@@ -299,25 +294,26 @@ impl Processor {
         };
     }
 
-    pub fn coredump(&self, write_to_file: bool) -> Vec<u16> {
+    pub fn coredump(&self, write_to_file: bool) -> (Vec<u16>, Vec<u16>) {
         let mut dump = format!("Core dump at time: {:#?}\n", OffsetDateTime::now_utc());
         dump.push_str(format!("Clock cycle: {:#?}\n", self.clock_cycle).as_str());
         dump.push_str("\nRegisters:\n");
-        let mut dump_vec = Vec::new();
+        let mut dump_registers = Vec::new();
         for (i, register) in self.registers.iter().enumerate() {
             dump.push_str(format!("R{:#02X}: {:#06X}\n", i, register).as_str());
-            dump_vec.push(register.clone());
+            dump_registers.push(register.clone());
         }
         dump.push_str("\nMemory:\n");
+        let mut dump_memory = Vec::new();
         for (i, memory) in self.memory.iter().enumerate() {
             dump.push_str(format!("M{:#06X}: {:#06X}\n", i, memory).as_str());
-            dump_vec.push(memory.clone());
+            dump_memory.push(memory.clone());
         }
         if write_to_file {
             let mut file = File::create("core.dump").expect("Could not create coredump file");
             file.write_all(dump.as_bytes())
                 .expect("Could not write to coredump file");
         }
-        return dump_vec;
+        return (dump_registers, dump_memory);
     }
 }

@@ -1,0 +1,4 @@
+92F5 # r2 = 0xF5
+9310 # r3 = 0x10
+C123 # write r2 to M(r3+1) (M11 = 0xF5)
+F100 # terminate

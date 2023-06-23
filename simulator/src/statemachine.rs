@@ -1,6 +1,6 @@
 use crate::types::{
     AddressSource, AluOperation, AluSource, ControlSignals, InstructionToken, Opcode,
-    RegisterWriteSource, State,
+    RegisterWriteSource, RegisterWriteTarget, State,
 };
 use log::{error, info, trace};
 
@@ -36,6 +36,7 @@ impl StateMachine {
                 alu_operation: AluOperation::Inactive,
                 alu_source: AluSource::Register,
                 process_special: false,
+                write_register_target: RegisterWriteTarget::Nibble2,
             },
             State::PcRead => ControlSignals {
                 terminate: false,
@@ -53,6 +54,7 @@ impl StateMachine {
                 alu_operation: AluOperation::Inactive,
                 alu_source: AluSource::Register,
                 process_special: false,
+                write_register_target: RegisterWriteTarget::Nibble2,
             },
             State::InstructionFetch => ControlSignals {
                 terminate: false,
@@ -70,6 +72,7 @@ impl StateMachine {
                 alu_operation: AluOperation::Add,
                 alu_source: AluSource::Constant1,
                 process_special: false,
+                write_register_target: RegisterWriteTarget::Nibble2,
             },
             State::Decode => ControlSignals {
                 terminate: false,
@@ -87,6 +90,7 @@ impl StateMachine {
                 alu_operation: AluOperation::Inactive,
                 alu_source: AluSource::Register,
                 process_special: false,
+                write_register_target: RegisterWriteTarget::Nibble2,
             },
             State::SetLower => ControlSignals {
                 terminate: false,
@@ -104,6 +108,7 @@ impl StateMachine {
                 alu_operation: AluOperation::Inactive,
                 alu_source: AluSource::Register,
                 process_special: false,
+                write_register_target: RegisterWriteTarget::Nibble2,
             },
             State::SetUpper => ControlSignals {
                 terminate: false,
@@ -121,6 +126,7 @@ impl StateMachine {
                 alu_operation: AluOperation::Inactive,
                 alu_source: AluSource::Register,
                 process_special: false,
+                write_register_target: RegisterWriteTarget::Nibble2,
             },
             State::ArithmeticOperation => ControlSignals {
                 terminate: false,
@@ -138,6 +144,7 @@ impl StateMachine {
                 alu_operation: AluOperation::from_opcode(&self.opcode),
                 alu_source: AluSource::Register,
                 process_special: false,
+                write_register_target: RegisterWriteTarget::Nibble2,
             },
             State::SetIf => ControlSignals {
                 terminate: false,
@@ -155,6 +162,7 @@ impl StateMachine {
                 alu_operation: AluOperation::Subtract,
                 alu_source: AluSource::Register,
                 process_special: false,
+                write_register_target: RegisterWriteTarget::Nibble2,
             },
             State::Memory => ControlSignals {
                 terminate: false,
@@ -172,6 +180,7 @@ impl StateMachine {
                 alu_operation: AluOperation::Add,
                 alu_source: AluSource::MemoryOffset,
                 process_special: false,
+                write_register_target: RegisterWriteTarget::Nibble2,
             },
             State::ArithmeticWriteBack => ControlSignals {
                 terminate: false,
@@ -189,6 +198,7 @@ impl StateMachine {
                 alu_operation: AluOperation::Inactive,
                 alu_source: AluSource::Register,
                 process_special: false,
+                write_register_target: RegisterWriteTarget::Nibble2,
             },
             State::SetIfLess => ControlSignals {
                 terminate: false,
@@ -206,6 +216,7 @@ impl StateMachine {
                 alu_operation: AluOperation::Inactive,
                 alu_source: AluSource::Register,
                 process_special: false,
+                write_register_target: RegisterWriteTarget::Nibble2,
             },
             State::SetIfEqual => ControlSignals {
                 terminate: false,
@@ -223,6 +234,7 @@ impl StateMachine {
                 alu_operation: AluOperation::Inactive,
                 alu_source: AluSource::Register,
                 process_special: false,
+                write_register_target: RegisterWriteTarget::Nibble2,
             },
             State::MemoryRead => ControlSignals {
                 terminate: false,
@@ -240,6 +252,7 @@ impl StateMachine {
                 alu_operation: AluOperation::Inactive,
                 alu_source: AluSource::Register,
                 process_special: false,
+                write_register_target: RegisterWriteTarget::Nibble2,
             },
             State::MemoryWrite => ControlSignals {
                 terminate: false,
@@ -257,6 +270,7 @@ impl StateMachine {
                 alu_operation: AluOperation::Inactive,
                 alu_source: AluSource::Register,
                 process_special: false,
+                write_register_target: RegisterWriteTarget::Nibble2,
             },
             State::MemoryReadRegisterWriteback => ControlSignals {
                 terminate: false,
@@ -274,6 +288,7 @@ impl StateMachine {
                 alu_operation: AluOperation::Inactive,
                 alu_source: AluSource::Register,
                 process_special: false,
+                write_register_target: RegisterWriteTarget::Nibble3,
             },
             State::SetPcTest => ControlSignals {
                 terminate: false,
@@ -291,6 +306,7 @@ impl StateMachine {
                 alu_operation: AluOperation::Subtract,
                 alu_source: AluSource::Register,
                 process_special: false,
+                write_register_target: RegisterWriteTarget::Nibble2,
             },
             State::SetPcWriteback => ControlSignals {
                 terminate: false,
@@ -299,15 +315,16 @@ impl StateMachine {
                 memory_read: false,
                 memory_write: false,
                 instruction_register_write: false,
-                register_write: true,
+                register_write: false,
                 register_write_source: RegisterWriteSource::InstructionNibble2,
                 write_upper: false,
                 write_long: false,
                 read_pc: false,
-                write_pc: false,
+                write_pc: true,
                 alu_operation: AluOperation::Inactive,
                 alu_source: AluSource::Register,
                 process_special: false,
+                write_register_target: RegisterWriteTarget::Nibble2,
             },
             State::Special => ControlSignals {
                 terminate: false,
@@ -325,6 +342,7 @@ impl StateMachine {
                 alu_operation: AluOperation::Inactive,
                 alu_source: AluSource::Register,
                 process_special: true,
+                write_register_target: RegisterWriteTarget::Nibble2,
             },
         }
     }
@@ -367,8 +385,6 @@ impl StateMachine {
             State::SetPcTest => {
                 if self.opcode == Opcode::SetPcIf && alu_zero {
                     self.state = State::SetPcWriteback;
-                } else if self.opcode == Opcode::SetPcIfNot && !alu_zero {
-                    self.state = State::SetPcWriteback;
                 } else {
                     self.state = State::PcRead;
                 }
@@ -393,7 +409,6 @@ impl StateMachine {
             Opcode::SaveWord => self.state = State::Memory,
             Opcode::Special => self.state = State::Special,
             Opcode::SetPcIf => self.state = State::SetPcTest,
-            Opcode::SetPcIfNot => self.state = State::SetPcTest,
             Opcode::Invalid => {
                 self.state = State::Terminate;
                 error!("Invalid opcode encountered, terminating program");
