@@ -18,97 +18,99 @@ impl Alu {
         source_b: u16,
         operation: &AluOperation,
     ) -> AluOutput {
+        let source_a: std::num::Wrapping<u16> = std::num::Wrapping(source_a);
+        let source_b: std::num::Wrapping<u16> = std::num::Wrapping(source_b);
         match operation {
             AluOperation::Add => {
-                let result: u32 = (source_a + source_b) as u32;
+                let result: u32 = (source_a + source_b).0 as u32;
                 let zero: bool = result == 0;
                 let negative: bool = match result & 0b1000000000000000 {
                     1 => true,
                     _ => false,
                 };
-                let result: u32 = result as u32;
-                AluOutput {
+                return AluOutput {
                     result,
                     zero,
                     negative,
-                }
+                };
             }
             AluOperation::Subtract => {
-                // if there would be (integer) underflow convert to 2s complement
-                let mut source_a = source_a;
-                let mut source_b = source_b;
-                if source_a < source_b {
-                    source_b = source_b - source_a;
-                    source_a = 0xFFFF;
-                }
-                let result: u32 = (source_a - source_b) as u32;
+                let result: u32 = (source_a - source_b).0 as u32;
                 let zero: bool = result == 0;
                 let negative: bool = match result & 0b1000000000000000 {
                     0b1000000000000000 => true,
                     _ => false,
                 };
-                AluOutput {
+                return AluOutput {
                     result,
                     zero,
                     negative,
-                }
+                };
             }
             AluOperation::And => {
-                let result: u32 = (source_a & source_b) as u32;
+                let result: u32 = (source_a & source_b).0 as u32;
                 let zero: bool = result == 0;
                 let negative: bool = false;
-                AluOutput {
+                return AluOutput {
                     result,
                     zero,
                     negative,
-                }
+                };
             }
             AluOperation::Or => {
-                let result: u32 = (source_a | source_b) as u32;
+                let result: u32 = (source_a | source_b).0 as u32;
                 let zero: bool = result == 0;
                 let negative: bool = false;
-                AluOutput {
+                return AluOutput {
                     result,
                     zero,
                     negative,
-                }
+                };
             }
             AluOperation::ShiftLeft => {
+                let source_a: u32 = source_a.0 as u32;
+                let source_b: u32 = source_b.0 as u32;
                 let result: u32 = (source_a << source_b) as u32;
                 println!("{} << {} = {}", source_a, source_b, result);
                 let zero: bool = result == 0;
                 let negative: bool = false;
-                AluOutput {
+                return AluOutput {
                     result,
                     zero,
                     negative,
-                }
+                };
             }
             AluOperation::ShiftRightLogical => {
+                let source_a: u32 = source_a.0 as u32;
+                let source_b: u32 = source_b.0 as u32;
                 let result: u32 = (source_a >> source_b) as u32;
                 let zero: bool = result == 0;
                 let negative: bool = false;
-                AluOutput {
+                return AluOutput {
                     result,
                     zero,
                     negative,
-                }
+                };
             }
             AluOperation::ShiftRightArithmetic => {
-                let result: u32 = match (source_a & 0b1000000000000000) == 0b1000000000000000 {
-                    true => ((source_a) >> source_b) as u32 | (0xFFFF << (16 - source_b)),
-                    false => ((source_a) >> source_b) as u32,
+                let source_a: u32 = source_a.0 as u32;
+                let source_b: u32 = source_b.0 as u32;
+                let result: u32 = if (source_a & 0b1000000000000000) == 0b1000000000000000 {
+                    // Fill right shift 0 bits with 1s
+                    ((source_a) >> source_b) as u32 | (0xFFFF << (16 - source_b))
+                } else {
+                    ((source_a) >> source_b) as u32
                 };
                 let zero: bool = result == 0;
                 let negative: bool = false;
-                AluOutput {
+                return AluOutput {
                     result,
                     zero,
                     negative,
-                }
+                };
             }
-            _ => {
-                error!("Unimplemented AluOperation {:?}", operation);
+            AluOperation::Inactive => {
+                error!("ALU operation was inactive");
                 return AluOutput {
                     result: 0,
                     zero: false,
