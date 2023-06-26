@@ -71,7 +71,6 @@ impl Alu {
                 let source_a: u32 = source_a.0 as u32;
                 let source_b: u32 = source_b.0 as u32;
                 let result: u32 = (source_a << source_b) as u32;
-                println!("{} << {} = {}", source_a, source_b, result);
                 let zero: bool = result == 0;
                 let negative: bool = false;
                 return AluOutput {
