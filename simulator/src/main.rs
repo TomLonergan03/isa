@@ -2,10 +2,11 @@ use std::fs::File;
 
 use log::info;
 use simplelog::{
-    ColorChoice, CombinedLogger, ConfigBuilder, LevelFilter, TermLogger, TerminalMode, WriteLogger,
+    ColorChoice, CombinedLogger, ConfigBuilder, LevelFilter, LevelPadding, TargetPadding,
+    TermLogger, TerminalMode, WriteLogger,
 };
 
-use simulator::{args, processor, types::RunState};
+use simulator::{args, processor::Processor, types::RunState};
 
 fn main() {
     let args = args::parse_args();
@@ -15,11 +16,11 @@ fn main() {
     let args = args.unwrap();
     println!("------------------------------------------------------------------------");
     let config = ConfigBuilder::new()
-        .set_level_padding(simplelog::LevelPadding::Right)
+        .set_level_padding(LevelPadding::Right)
         .set_thread_level(LevelFilter::Off)
         .set_location_level(LevelFilter::Off)
         .set_target_level(LevelFilter::Error)
-        .set_target_padding(simplelog::TargetPadding::Right(30))
+        .set_target_padding(TargetPadding::Right(30))
         .build();
     CombinedLogger::init(vec![
         TermLogger::new(
@@ -35,8 +36,7 @@ fn main() {
         ),
     ])
     .unwrap();
-    let mut processor: processor::Processor =
-        processor::Processor::new_from_file(args.path_to_file, args.breakpoint);
+    let mut processor: Processor = Processor::new_from_file(args.path_to_file, args.breakpoint);
     let mut running: RunState = RunState::Continue;
     info!("Beginning execution");
     while running == RunState::Continue {
