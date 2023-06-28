@@ -13,7 +13,7 @@ fn add() {
         let mut memory_state = [0; 65536];
         memory_state[0] = 0x0223;
         memory_state[1] = 0xF100;
-        let mut processor = Processor::new_from_array(register_state, memory_state);
+        let mut processor = Processor::new_from_array(register_state, memory_state, false);
         let mut running = RunState::Continue;
         while running == RunState::Continue {
             running = processor.run();
@@ -35,7 +35,7 @@ fn subtract() {
         let mut memory_state = [0; 65536];
         memory_state[0] = 0x1223;
         memory_state[1] = 0xF100;
-        let mut processor = Processor::new_from_array(register_state, memory_state);
+        let mut processor = Processor::new_from_array(register_state, memory_state, false);
         let mut running = RunState::Continue;
         while running == RunState::Continue {
             running = processor.run();
@@ -61,7 +61,7 @@ fn and() {
         let mut memory_state = [0; 65536];
         memory_state[0] = 0x2223;
         memory_state[1] = 0xF100;
-        let mut processor = Processor::new_from_array(register_state, memory_state);
+        let mut processor = Processor::new_from_array(register_state, memory_state, false);
         let mut running = RunState::Continue;
         while running == RunState::Continue {
             running = processor.run();
@@ -83,7 +83,7 @@ fn or() {
         let mut memory_state = [0; 65536];
         memory_state[0] = 0x3223;
         memory_state[1] = 0xF100;
-        let mut processor = Processor::new_from_array(register_state, memory_state);
+        let mut processor = Processor::new_from_array(register_state, memory_state, false);
         let mut running = RunState::Continue;
         while running == RunState::Continue {
             running = processor.run();
@@ -105,7 +105,7 @@ fn set_if_less() {
         let mut memory_state = [0; 65536];
         memory_state[0] = 0x4223;
         memory_state[1] = 0xF100;
-        let mut processor = Processor::new_from_array(register_state, memory_state);
+        let mut processor = Processor::new_from_array(register_state, memory_state, false);
         let mut running = RunState::Continue;
         while running == RunState::Continue {
             running = processor.run();
@@ -134,7 +134,7 @@ fn set_if_equal() {
         let mut memory_state = [0; 65536];
         memory_state[0] = 0x5223;
         memory_state[1] = 0xF100;
-        let mut processor = Processor::new_from_array(register_state, memory_state);
+        let mut processor = Processor::new_from_array(register_state, memory_state, false);
         let mut running = RunState::Continue;
         while running == RunState::Continue {
             running = processor.run();
@@ -159,7 +159,7 @@ fn shift_left() {
         let mut memory_state = [0; 65536];
         memory_state[0] = 0x6223;
         memory_state[1] = 0xF100;
-        let mut processor = Processor::new_from_array(register_state, memory_state);
+        let mut processor = Processor::new_from_array(register_state, memory_state, false);
         let mut running = RunState::Continue;
         while running == RunState::Continue {
             running = processor.run();
@@ -181,7 +181,7 @@ fn shift_right_logical() {
         let mut memory_state = [0; 65536];
         memory_state[0] = 0x7223;
         memory_state[1] = 0xF100;
-        let mut processor = Processor::new_from_array(register_state, memory_state);
+        let mut processor = Processor::new_from_array(register_state, memory_state, false);
         let mut running = RunState::Continue;
         while running == RunState::Continue {
             running = processor.run();
@@ -203,7 +203,7 @@ fn shift_right_arithmetic() {
         let mut memory_state = [0; 65536];
         memory_state[0] = 0x8223;
         memory_state[1] = 0xF100;
-        let mut processor = Processor::new_from_array(register_state, memory_state);
+        let mut processor = Processor::new_from_array(register_state, memory_state, false);
         let mut running = RunState::Continue;
         while running == RunState::Continue {
             running = processor.run();
@@ -222,7 +222,7 @@ fn set_lower() {
         let mut memory_state = [0; 65536];
         memory_state[0] = 0x9200 | a;
         memory_state[1] = 0xF100;
-        let mut processor = Processor::new_from_array(register_state, memory_state);
+        let mut processor = Processor::new_from_array(register_state, memory_state, false);
         let mut running = RunState::Continue;
         while running == RunState::Continue {
             running = processor.run();
@@ -243,7 +243,7 @@ fn set_upper() {
         let mut memory_state = [0; 65536];
         memory_state[0] = 0xA200 + b;
         memory_state[1] = 0xF100;
-        let mut processor = Processor::new_from_array(register_state, memory_state);
+        let mut processor = Processor::new_from_array(register_state, memory_state, false);
         let mut running = RunState::Continue;
         while running == RunState::Continue {
             running = processor.run();
@@ -266,7 +266,7 @@ fn load_word() {
         memory_state[0] = 0xB032 | (offset << 12);
         memory_state[1] = 0xF100;
         memory_state[(address + offset) as usize] = word;
-        let mut processor = Processor::new_from_array(register_state, memory_state);
+        let mut processor = Processor::new_from_array(register_state, memory_state, false);
         let mut running = RunState::Continue;
         while running == RunState::Continue {
             running = processor.run();
@@ -293,7 +293,7 @@ fn save_word() {
         let mut memory_state = [0; 65536];
         memory_state[0] = 0xC032 | (offset << 12);
         memory_state[1] = 0xF100;
-        let mut processor = Processor::new_from_array(register_state, memory_state);
+        let mut processor = Processor::new_from_array(register_state, memory_state, false);
         let mut running = RunState::Continue;
         while running == RunState::Continue {
             running = processor.run();
@@ -320,7 +320,7 @@ fn set_pc_if() {
         memory_state[0] = 0xD223;
         memory_state[1] = 0x9301;
         memory_state[2] = 0xF100;
-        let mut processor = Processor::new_from_array(register_state, memory_state);
+        let mut processor = Processor::new_from_array(register_state, memory_state, false);
         let mut running = RunState::Continue;
         while running == RunState::Continue {
             running = processor.run();

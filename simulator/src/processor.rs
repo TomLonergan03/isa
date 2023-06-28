@@ -22,12 +22,13 @@ pub struct Processor {
     state_machine: StateMachine,
     pipeline_registers: PipelineRegisters,
     breakpoint: u64,
+    dump_to_file: bool,
 }
 
 impl Processor {
     /// Create a processor by initialising memory to the contents of a .ayu file,
     /// all registers are 0 so starts executing from first instruction
-    pub fn new_from_file(path_to_file: String, breakpoint: u64) -> Processor {
+    pub fn new_from_file(path_to_file: String, breakpoint: u64, dump_to_file: bool) -> Processor {
         let instruction_string: String =
             std::fs::read_to_string(path_to_file).expect("File not found");
         let instruction_array: Vec<u16> = instruction_string
@@ -86,12 +87,17 @@ impl Processor {
                 alu_zero: false,
             },
             breakpoint,
+            dump_to_file,
         };
     }
 
     /// Create a processor by initialising registers and memory to provided arrays,
     /// therefore can be used to load a processor that has already partially executed a program
-    pub fn new_from_array(register_array: [u16; 16], memory_array: [u16; 65536]) -> Processor {
+    pub fn new_from_array(
+        register_array: [u16; 16],
+        memory_array: [u16; 65536],
+        dump_to_file: bool,
+    ) -> Processor {
         debug!("Register contents:");
         register_array
             .iter()
@@ -144,6 +150,7 @@ impl Processor {
                 alu_zero: false,
             },
             breakpoint: u64::MAX,
+            dump_to_file,
         };
     }
 
@@ -179,7 +186,7 @@ impl Processor {
         }
         if self.control_signals.terminate {
             info!("Terminating processor, dumping core");
-            self.coredump(true);
+            self.coredump(self.dump_to_file);
             return RunState::Stop;
         }
         if self.control_signals.decode {
@@ -264,19 +271,19 @@ impl Processor {
             match self.instruction_token.nibble_2 {
                 1 => {
                     info!("Reached end of program");
-                    self.coredump(true);
+                    self.coredump(self.dump_to_file);
                     return RunState::Stop;
                 }
                 _ => {
                     error!("Unimplemented special instruction");
-                    self.coredump(true);
+                    self.coredump(self.dump_to_file);
                     return RunState::Stop;
                 }
             }
         }
         if self.clock_cycle as u64 > self.breakpoint {
             info!("Reached breakpoint");
-            self.coredump(true);
+            self.coredump(self.dump_to_file);
             return RunState::Stop;
         }
         self.clock_cycle += 1;

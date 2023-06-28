@@ -36,7 +36,8 @@ fn main() {
         ),
     ])
     .unwrap();
-    let mut processor: Processor = Processor::new_from_file(args.path_to_file, args.breakpoint);
+    let mut processor: Processor =
+        Processor::new_from_file(args.path_to_file, args.breakpoint, true);
     let mut running: RunState = RunState::Continue;
     info!("Beginning execution");
     while running == RunState::Continue {
