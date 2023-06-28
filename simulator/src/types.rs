@@ -24,7 +24,7 @@ pub enum Opcode {
 impl Opcode {
     /// Convert a u8 (such as the first nibble of an instruction) to it's opcode representation
     pub fn from_u8(value: u8) -> Opcode {
-        return match value {
+        match value {
             0x00 => Opcode::Add,
             0x01 => Opcode::Subtract,
             0x02 => Opcode::And,
@@ -41,7 +41,7 @@ impl Opcode {
             0x0D => Opcode::SetPcIf,
             0x0F => Opcode::Special,
             _ => Opcode::Invalid,
-        };
+        }
     }
 }
 
@@ -58,7 +58,7 @@ pub enum InstructionType {
 impl InstructionType {
     /// Get an InstructionType from an Opcode
     pub fn from_opcode(opcode: &Opcode) -> InstructionType {
-        return match opcode {
+        match opcode {
             Opcode::Add => InstructionType::Register,
             Opcode::Subtract => InstructionType::Register,
             Opcode::And => InstructionType::Register,
@@ -75,7 +75,7 @@ impl InstructionType {
             Opcode::Special => InstructionType::Special,
             Opcode::SetPcIf => InstructionType::Special,
             Opcode::Invalid => InstructionType::Invalid,
-        };
+        }
     }
 }
 
@@ -144,7 +144,7 @@ pub enum AluOperation {
 impl AluOperation {
     /// Determine appropriate ALU operation based on Opcode
     pub fn from_opcode(opcode: &Opcode) -> AluOperation {
-        return match opcode {
+        match opcode {
             Opcode::Add => AluOperation::Add,
             Opcode::Subtract => AluOperation::Subtract,
             Opcode::And => AluOperation::And,
@@ -158,7 +158,7 @@ impl AluOperation {
                 error!("Invalid opcode for ALU operation");
                 panic!("Invalid opcode for ALU operation")
             }
-        };
+        }
     }
 }
 

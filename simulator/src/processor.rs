@@ -32,8 +32,8 @@ impl Processor {
         let instruction_string: String =
             std::fs::read_to_string(path_to_file).expect("File not found");
         let instruction_array: Vec<u16> = instruction_string
-            .split("\n")
-            .filter(|x| !x.starts_with("#") && !x.is_empty())
+            .split('\n')
+            .filter(|x| !x.starts_with('#') && !x.is_empty())
             .map(|x| parse_instruction(x).expect("Invalid instruction"))
             .collect();
         let mut memory_array: [u16; 65536] = [0; 65536];
@@ -45,8 +45,7 @@ impl Processor {
             0 => (),
             _ => debug!("M{:#06X}: {:#06X}", i, x),
         });
-
-        return Processor {
+        Processor {
             alu: alu::Alu::new(),
             clock_cycle: 0,
             registers: [0; 16],
@@ -88,7 +87,7 @@ impl Processor {
             },
             breakpoint,
             dump_to_file,
-        };
+        }
     }
 
     /// Create a processor by initialising registers and memory to provided arrays,
@@ -109,7 +108,7 @@ impl Processor {
             0 => (),
             _ => debug!("M{:#06X}: {:#06X}", i, x),
         });
-        return Processor {
+        Processor {
             alu: alu::Alu::new(),
             clock_cycle: 0,
             registers: register_array,
@@ -151,7 +150,7 @@ impl Processor {
             },
             breakpoint: u64::MAX,
             dump_to_file,
-        };
+        }
     }
 
     /// Runs 1 clock cycle, returns whether the processor should continue running for another cycle
@@ -220,7 +219,7 @@ impl Processor {
         }
         if self.control_signals.register_write || self.control_signals.write_pc {
             let value_to_write: u16 = match self.control_signals.register_write_source {
-                RegisterWriteSource::Alu => self.pipeline_registers.alu_output as u16 & 0xFFFF,
+                RegisterWriteSource::Alu => (self.pipeline_registers.alu_output & 0xFFFF) as u16,
                 RegisterWriteSource::InstructionByte2 => {
                     (((((self.instruction_token.nibble_3 as u16) << 4) & 0xF0) as u8)
                         + self.instruction_token.nibble_4) as u16
@@ -281,13 +280,13 @@ impl Processor {
                 }
             }
         }
-        if self.clock_cycle as u64 > self.breakpoint {
+        if self.clock_cycle > self.breakpoint {
             info!("Reached breakpoint");
             self.coredump(self.dump_to_file);
             return RunState::Stop;
         }
         self.clock_cycle += 1;
-        return RunState::Continue;
+        RunState::Continue
     }
 
     /// Convert an instruction to an InstructionToken
@@ -298,13 +297,13 @@ impl Processor {
         let nibble_3: u8 = u8::try_from((instruction & 0x00F0) >> 4).expect("Invalid byte 3");
         let nibble_4: u8 = u8::try_from(instruction & 0x000F).expect("Invalid byte 4");
         let instruction_type: InstructionType = InstructionType::from_opcode(&opcode);
-        return InstructionToken {
+        InstructionToken {
             opcode,
             nibble_2,
             nibble_3,
             nibble_4,
             instruction_type,
-        };
+        }
     }
 
     /// Dump the current state of a processor to a file
@@ -317,19 +316,19 @@ impl Processor {
         let mut dump_registers = Vec::new();
         for (i, register) in self.registers.iter().enumerate() {
             dump.push_str(format!("R{:#02X}: {:#06X}\n", i, register).as_str());
-            dump_registers.push(register.clone());
+            dump_registers.push(*register);
         }
         dump.push_str("\nMemory:\n");
         let mut dump_memory = Vec::new();
         for (i, memory) in self.memory.iter().enumerate() {
             dump.push_str(format!("M{:#06X}: {:#06X}\n", i, memory).as_str());
-            dump_memory.push(memory.clone());
+            dump_memory.push(*memory);
         }
         if write_to_file {
             let mut file = File::create("core.dump").expect("Could not create coredump file");
             file.write_all(dump.as_bytes())
                 .expect("Could not write to coredump file");
         }
-        return (dump_registers, dump_memory);
+        (dump_registers, dump_memory)
     }
 }

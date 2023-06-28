@@ -165,7 +165,7 @@ fn shift_left() {
             running = processor.run();
         }
         let (_dump_registers, _dump_memory) = processor.coredump(false);
-        assert_eq!(_dump_registers[2], (a << b) & 0xFFFF);
+        assert_eq!(_dump_registers[2], a << b);
     }
 }
 
@@ -187,7 +187,7 @@ fn shift_right_logical() {
             running = processor.run();
         }
         let (_dump_registers, _dump_memory) = processor.coredump(false);
-        assert_eq!(_dump_registers[2], (a >> b) & 0xFFFF);
+        assert_eq!(_dump_registers[2], a >> b);
     }
 }
 
@@ -209,7 +209,7 @@ fn shift_right_arithmetic() {
             running = processor.run();
         }
         let (_dump_registers, _dump_memory) = processor.coredump(false);
-        assert_eq!(_dump_registers[2], (a >> b) & 0xFFFF | (0xFFFF << (16 - b)));
+        assert_eq!(_dump_registers[2], a >> b | (0xFFFF << (16 - b)));
     }
 }
 

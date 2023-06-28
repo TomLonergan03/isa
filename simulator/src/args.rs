@@ -6,7 +6,7 @@ pub struct Args {
     pub breakpoint: u64,
 }
 
-fn log_level_from_string(log_level: &String) -> simplelog::LevelFilter {
+fn log_level_from_string(log_level: &str) -> simplelog::LevelFilter {
     match log_level.replace("--log=", "").as_str() {
         "trace" => simplelog::LevelFilter::Trace,
         "debug" => simplelog::LevelFilter::Debug,
@@ -15,7 +15,7 @@ fn log_level_from_string(log_level: &String) -> simplelog::LevelFilter {
         "error" => simplelog::LevelFilter::Error,
         _ => {
             println!("Invalid log level, defaulting to info");
-            return simplelog::LevelFilter::Info;
+            simplelog::LevelFilter::Info
         }
     }
 }
@@ -23,14 +23,12 @@ fn log_level_from_string(log_level: &String) -> simplelog::LevelFilter {
 fn parse_arg(arg: &String, mut current_args: Args) -> Option<Args> {
     match arg {
         x if x.contains("--log=") => {
-            current_args.log_level = log_level_from_string(&x);
+            current_args.log_level = log_level_from_string(x);
             println!("Log level: {}", current_args.log_level);
         }
         x if x.contains("--file=") => {
             let file_path = parse_file_path(x);
-            if file_path.is_none() {
-                return None;
-            }
+            file_path.as_ref()?;
             current_args.path_to_file = file_path.unwrap();
             println!("File: {}", current_args.path_to_file);
         }
@@ -55,16 +53,16 @@ fn parse_arg(arg: &String, mut current_args: Args) -> Option<Args> {
             return None;
         }
     }
-    return Some(current_args);
+    Some(current_args)
 }
 
-fn parse_file_path(path_to_file: &String) -> Option<String> {
+fn parse_file_path(path_to_file: &str) -> Option<String> {
     let path_to_file = path_to_file.replace("--file=", "");
     if !std::path::Path::new(&path_to_file).exists() {
         eprintln!("No file at '{}'", path_to_file);
         return None;
     };
-    return Some(path_to_file);
+    Some(path_to_file)
 }
 
 fn print_help() {
@@ -93,5 +91,5 @@ pub fn parse_args() -> Option<Args> {
     if parsed_args.help_set {
         return None;
     }
-    return Some(parsed_args);
+    Some(parsed_args)
 }
