@@ -195,7 +195,7 @@ impl Processor {
         if self.control_signals.memory_read {
             let address: u16 = match self.control_signals.address_source {
                 AddressSource::ProgramCounter => self.pipeline_registers.register_read_b,
-                AddressSource::Alu => (self.pipeline_registers.alu_output & 0xFFFF) as u16,
+                AddressSource::Alu => self.pipeline_registers.alu_output,
             };
             let data = self.memory[address as usize];
             self.pipeline_registers.memory_data = data;
@@ -211,7 +211,7 @@ impl Processor {
         if self.control_signals.memory_write {
             let address: u16 = match self.control_signals.address_source {
                 AddressSource::ProgramCounter => self.pipeline_registers.register_read_b,
-                AddressSource::Alu => (self.pipeline_registers.alu_output & 0xFFFF) as u16,
+                AddressSource::Alu => self.pipeline_registers.alu_output,
             };
             let data = self.pipeline_registers.register_read_a;
             self.memory[address as usize] = data;
@@ -219,7 +219,7 @@ impl Processor {
         }
         if self.control_signals.register_write || self.control_signals.write_pc {
             let value_to_write: u16 = match self.control_signals.register_write_source {
-                RegisterWriteSource::Alu => (self.pipeline_registers.alu_output & 0xFFFF) as u16,
+                RegisterWriteSource::Alu => self.pipeline_registers.alu_output,
                 RegisterWriteSource::InstructionByte2 => {
                     (((((self.instruction_token.nibble_3 as u16) << 4) & 0xF0) as u8)
                         + self.instruction_token.nibble_4) as u16

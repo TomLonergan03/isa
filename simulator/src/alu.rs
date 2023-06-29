@@ -20,7 +20,7 @@ impl Alu {
     ) -> AluOutput {
         match operation {
             AluOperation::Add => {
-                let result: u32 = (source_a.wrapping_add(source_b)) as u32;
+                let result: u16 = source_a.wrapping_add(source_b);
                 let zero: bool = result == 0;
                 let negative: bool = matches!(result & 0b1000000000000000, 1);
                 AluOutput {
@@ -31,7 +31,7 @@ impl Alu {
             }
             AluOperation::Subtract => {
                 let source_b: u16 = !source_b + 1;
-                let result: u32 = (source_a.wrapping_add(source_b)) as u32;
+                let result: u16 = source_a.wrapping_add(source_b);
                 let zero: bool = result == 0;
                 let negative: bool = matches!(result & 0b1000000000000000, 1);
                 AluOutput {
@@ -41,9 +41,9 @@ impl Alu {
                 }
             }
             AluOperation::And => {
-                let result: u32 = (source_a & source_b) as u32;
+                let result: u16 = source_a & source_b;
                 let zero: bool = result == 0;
-                let negative: bool = false;
+                let negative: bool = matches!(result & 0b1000000000000000, 1);
                 AluOutput {
                     result,
                     zero,
@@ -51,9 +51,9 @@ impl Alu {
                 }
             }
             AluOperation::Or => {
-                let result: u32 = (source_a | source_b) as u32;
+                let result: u16 = source_a | source_b;
                 let zero: bool = result == 0;
-                let negative: bool = false;
+                let negative: bool = matches!(result & 0b1000000000000000, 1);
                 AluOutput {
                     result,
                     zero,
@@ -61,9 +61,9 @@ impl Alu {
                 }
             }
             AluOperation::ShiftLeft => {
-                let result: u32 = (source_a << source_b) as u32;
+                let result: u16 = source_a.checked_shl(source_b as u32).unwrap_or(0);
                 let zero: bool = result == 0;
-                let negative: bool = false;
+                let negative: bool = matches!(result & 0b1000000000000000, 1);
                 AluOutput {
                     result,
                     zero,
@@ -71,9 +71,9 @@ impl Alu {
                 }
             }
             AluOperation::ShiftRightLogical => {
-                let result: u32 = (source_a >> source_b) as u32;
+                let result: u16 = source_a.checked_shr(source_b as u32).unwrap_or(0);
                 let zero: bool = result == 0;
-                let negative: bool = false;
+                let negative: bool = matches!(result & 0b1000000000000000, 1);
                 AluOutput {
                     result,
                     zero,
@@ -81,14 +81,12 @@ impl Alu {
                 }
             }
             AluOperation::ShiftRightArithmetic => {
-                let result: u32 = if (source_a & 0b1000000000000000) == 0b1000000000000000 {
-                    // Fill right shift 0 bits with 1s
-                    ((source_a) >> source_b) as u32 | (0xFFFF << (16 - source_b))
-                } else {
-                    ((source_a) >> source_b) as u32
-                };
+                let shift_result: u16 = source_a.checked_shr(source_b as u32).unwrap_or(0);
+                let leading_zeroes = shift_result.leading_zeros();
+                let mask = ((0b1111111111111111 << leading_zeroes) & 0xFFFF) as u16;
+                let result: u16 = shift_result | mask;
+                let negative: bool = matches!(source_a & 0b1000000000000000, 1);
                 let zero: bool = result == 0;
-                let negative: bool = false;
                 AluOutput {
                     result,
                     zero,

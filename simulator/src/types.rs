@@ -184,7 +184,7 @@ pub enum RunState {
 
 /// Results of an ALU operation
 pub struct AluOutput {
-    pub result: u32,
+    pub result: u16,
     pub zero: bool,
     pub negative: bool,
 }
@@ -194,7 +194,7 @@ pub struct PipelineRegisters {
     pub memory_data: u16,
     pub register_read_a: u16,
     pub register_read_b: u16,
-    pub alu_output: u32,
+    pub alu_output: u16,
     pub alu_negative: bool,
     pub alu_zero: bool,
 }

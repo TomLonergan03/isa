@@ -152,7 +152,7 @@ fn shift_left() {
     let mut rng = thread_rng();
     for _ in 0..100 {
         let a = rng.gen_range(0..65535);
-        let b = rng.gen_range(0..65535);
+        let b = rng.gen_range(0..32); // 32 means 50% shifts are valid, 50% overflow
         let mut register_state = [0; 16];
         register_state[2] = a;
         register_state[3] = b;
@@ -165,7 +165,7 @@ fn shift_left() {
             running = processor.run();
         }
         let (_dump_registers, _dump_memory) = processor.coredump(false);
-        assert_eq!(_dump_registers[2], a << b);
+        assert_eq!(_dump_registers[2], a.checked_shl(b as u32).unwrap_or(0));
     }
 }
 
@@ -174,7 +174,7 @@ fn shift_right_logical() {
     let mut rng = thread_rng();
     for _ in 0..100 {
         let a = rng.gen_range(0..65535);
-        let b = rng.gen_range(0..65535);
+        let b = rng.gen_range(0..32); // 32 means 50% shifts are valid, 50% overflow
         let mut register_state = [0; 16];
         register_state[2] = a;
         register_state[3] = b;
@@ -187,7 +187,7 @@ fn shift_right_logical() {
             running = processor.run();
         }
         let (_dump_registers, _dump_memory) = processor.coredump(false);
-        assert_eq!(_dump_registers[2], a >> b);
+        assert_eq!(_dump_registers[2], a.checked_shr(b as u32).unwrap_or(0));
     }
 }
 
@@ -196,7 +196,7 @@ fn shift_right_arithmetic() {
     let mut rng = thread_rng();
     for _ in 0..100 {
         let a = rng.gen_range(0..65535);
-        let b = rng.gen_range(0..65535);
+        let b = rng.gen_range(0..32); // 32 means 50% shifts are valid, 50% overflow
         let mut register_state = [0; 16];
         register_state[2] = a;
         register_state[3] = b;
@@ -209,7 +209,10 @@ fn shift_right_arithmetic() {
             running = processor.run();
         }
         let (_dump_registers, _dump_memory) = processor.coredump(false);
-        assert_eq!(_dump_registers[2], a >> b | (0xFFFF << (16 - b)));
+        let shift_result: u16 = a.checked_shr(b as u32).unwrap_or(0);
+        let result: u16 =
+            shift_result | ((0b1111111111111111 << shift_result.leading_zeros()) & 0xFFFF) as u16;
+        assert_eq!(_dump_registers[2], result);
     }
 }
 
