@@ -1,12 +1,13 @@
-use std::fs::File;
+mod parsing;
+mod util;
 
 use log::info;
 use simplelog::{
     ColorChoice, CombinedLogger, ConfigBuilder, LevelFilter, LevelPadding, TargetPadding,
     TermLogger, TerminalMode, WriteLogger,
 };
-
-use simulator::{args, processor::Processor, types::RunState};
+use std::fs::File;
+use util::args;
 
 fn main() {
     let args = args::parse_args();
@@ -36,12 +37,6 @@ fn main() {
         ),
     ])
     .unwrap();
-    let mut processor: Processor =
-        Processor::new_from_file(args.path_to_file, args.breakpoint, true);
-    let mut running: RunState = RunState::Continue;
     info!("Beginning execution");
-    while running == RunState::Continue {
-        running = processor.run();
-    }
     info!("Execution complete");
 }
